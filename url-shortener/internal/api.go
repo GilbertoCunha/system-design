@@ -5,20 +5,24 @@ import (
 	"net/http"
 )
 
-type Api struct {
+type API struct {
 	server *http.Server
 }
 
-func (a *Api) Run() error {
+func (a *API) Run() error {
 	log.Print("Server started...")
 	return a.server.ListenAndServe()
 }
 
-func NewApi() (Api, error) {
-	mux := http.NewServeMux()
+func NewAPI() *API {
+	// Creates Services
+	urlShortener := &UrlShortenerService{}
 
 	// Handler definition
-	mux.HandleFunc("/", RequestHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		RequestHandler(w, r, urlShortener)
+	})
 
 	// Server definition
 	server := &http.Server{
@@ -26,5 +30,5 @@ func NewApi() (Api, error) {
 		Handler: mux,
 	}
 
-	return Api{server: server}, nil
+	return &API{server: server}
 }

@@ -7,10 +7,6 @@ import (
 )
 
 func main() {
-	api, err := internal.NewApi()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	api := internal.NewAPI()
 	log.Fatal(api.Run())
 }
