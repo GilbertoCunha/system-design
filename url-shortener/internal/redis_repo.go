@@ -1,1 +1,29 @@
 package internal
+
+import (
+	"fmt"
+
+	"github.com/redis/go-redis/v9"
+)
+
+type RedisUrlRepo struct {
+	client *redis.Client
+}
+
+func NewRedisUrlRepo(c *AppConfig) *RedisUrlRepo {
+	return &RedisUrlRepo{
+		client: redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port),
+			Password: c.Redis.Password,
+			Username: c.Redis.User,
+		}),
+	}
+}
+
+func (r *RedisUrlRepo) GetLongUrl(shortUrl string) (string, error) {
+	return "", nil
+}
+
+func (r *RedisUrlRepo) PutShortUrl(shortUrl string) (string, error) {
+	return "", nil
+}
