@@ -1,10 +1,12 @@
 package internal
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 type UrlShortenerService struct {
@@ -21,11 +23,15 @@ func NewUrlShortenerService(dbRepo UrlRepo, cacheRepo UrlRepo) UrlShortenerServi
 
 // Shortens a URL, persists it into both database and cache
 // and returns the short url
-func (u UrlShortenerService) ShortenUrl(longUrl string) (string, error) {
+func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (string, error) {
 	// Validate url
-	_, err := url.ParseRequestURI(longUrl)
+	parsedUrl, err := url.ParseRequestURI(longUrl)
 	if err != nil {
-		return "", &InvalidUrlError{url: longUrl, message: err.Error()}
+		return "", &InvalidUrl{url: longUrl, message: err.Error()}
+	} else if parsedUrl.Scheme != "https" {
+		return "", &InvalidUrl{url: longUrl, message: "Url does not use https scheme"}
+	} else if parsedUrl.Host == "" {
+		return "", &InvalidUrl{url: longUrl, message: "Url host must not be empty"}
 	}
 
 	// In case there is a collision in ShortUrl creation,
@@ -34,16 +40,20 @@ func (u UrlShortenerService) ShortenUrl(longUrl string) (string, error) {
 	var shortUrl string
 	ok := false
 	urlToHash := longUrl
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
 	for !ok {
-		shortUrl = GetMD5Hash(longUrl)
-		_, dberr := u.dbUrlRepo.PutShortUrl(shortUrl, longUrl)
+		shortUrl = GetMD5Hash(urlToHash)
+		_, dberr := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
 
 		_, collision := errors.AsType[*ShortUrlCollision](dberr)
-		if !collision {
-			ok = true
-		} else {
-			log.Printf("COLLISION for hash %s", shortUrl)
+		if dberr != nil && !collision {
+			return "", dberr
+		} else if dberr != nil {
+			log.Printf("COLLISION for hash %s of url %s", shortUrl, urlToHash)
 			urlToHash += "1" // add suffix to hash again
+		} else {
+			ok = true
 		}
 	}
 
@@ -55,7 +65,7 @@ var shortUrlPattern = regexp.MustCompile("^[0-9a-f]{32}$")
 // Fetched the long url for a short one
 // First checks cache, queries the database if not present
 // Returns long url
-func (u UrlShortenerService) GetLongUrl(shortUrl string) (string, error) {
+func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
 	// Validate shortUrl
 	match := shortUrlPattern.MatchString(shortUrl)
 	if !match {
@@ -63,7 +73,9 @@ func (u UrlShortenerService) GetLongUrl(shortUrl string) (string, error) {
 	}
 
 	// Retrieve longUrl
-	longUrl, err := u.dbUrlRepo.GetLongUrl(shortUrl)
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	longUrl, err := u.dbUrlRepo.GetLongUrl(ctx, shortUrl)
 	if err != nil {
 		return "", err
 	}

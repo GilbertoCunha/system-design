@@ -1,6 +1,10 @@
 package internal
 
+import (
+	"context"
+)
+
 type UrlRepo interface {
-	GetLongUrl(shortUrl string) (string, error)
-	PutShortUrl(shortUrl string, longUrl string) (string, error)
+	GetLongUrl(ctx context.Context, shortUrl string) (string, error)
+	PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error)
 }

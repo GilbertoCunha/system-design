@@ -8,7 +8,11 @@ import (
 
 type AppConfig struct {
 	App struct {
-		Port int `mapstructure:"port"`
+		Port                     int `mapstructure:"port"`
+		ReadHeaderTimeoutSeconds int `mapstructure:"read_header_timeout_seconds"`
+		ReadTimeoutSeconds       int `mapstructure:"read_timeout_seconds"`
+		WriteTimeoutSeconds      int `mapstructure:"write_timeout_seconds"`
+		IdleTimeoutSeconds       int `mapstructure:"idle_timeout_seconds"`
 	} `mapstructure:"app"`
 
 	Postgres struct {

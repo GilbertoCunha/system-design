@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/redis/go-redis/v9"
@@ -20,11 +21,11 @@ func NewRedisUrlRepo(c *AppConfig) *RedisUrlRepo {
 	}
 }
 
-func (r *RedisUrlRepo) GetLongUrl(shortUrl string) (string, error) {
+func (r *RedisUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
 	return "", nil
 }
 
-func (r *RedisUrlRepo) PutShortUrl(shortUrl string, longUrl string) (string, error) {
+func (r *RedisUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error) {
 	return "", nil
 }
 

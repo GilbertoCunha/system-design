@@ -6,18 +6,18 @@ import (
 	"fmt"
 
 	"github.com/GilbertoCunha/system-design/url-shortener/internal/database"
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
+	pgxpool "github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PgUrlRepo struct {
-	ctx     *context.Context
-	conn    *pgx.Conn
+	pool    *pgxpool.Pool
 	queries *database.Queries
 }
 
-func NewPgUrlRepo(ctx *context.Context, c *AppConfig) (*PgUrlRepo, error) {
-	conn, err := pgx.Connect(
-		*ctx,
+func NewPgUrlRepo(ctx context.Context, c *AppConfig) (*PgUrlRepo, error) {
+	pool, err := pgxpool.New(
+		ctx,
 		fmt.Sprintf(
 			"postgres://%v:%v@%v:%v/%v",
 			c.Postgres.User,
@@ -31,11 +31,11 @@ func NewPgUrlRepo(ctx *context.Context, c *AppConfig) (*PgUrlRepo, error) {
 		return nil, err
 	}
 
-	return &PgUrlRepo{ctx: ctx, conn: conn, queries: database.New(conn)}, nil
+	return &PgUrlRepo{pool: pool, queries: database.New(pool)}, nil
 }
 
-func (r *PgUrlRepo) GetLongUrl(shortUrl string) (string, error) {
-	longUrl, err := r.queries.GetLongUrl(*r.ctx, shortUrl)
+func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
+	longUrl, err := r.queries.GetLongUrl(ctx, shortUrl)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", &ShortUrlNotFound{shortUrl: shortUrl}
@@ -45,28 +45,25 @@ func (r *PgUrlRepo) GetLongUrl(shortUrl string) (string, error) {
 	return longUrl, nil
 }
 
-func (r *PgUrlRepo) PutShortUrl(shortUrl string, longUrl string) (string, error) {
+func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error) {
 	queryLongUrl, err := r.queries.PutShortUrl(
-		*r.ctx,
+		ctx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
-
-	// In case of collision, no rows are returned by the query
-	// all other errors are unexpected
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return "", err
 	}
 
 	// If queryLongUrl is returned, a collision happened
 	// 1. If it's the same as longUrl, then this URL has already been shortened
 	// 2. If it's a different longUrl, then an actual collision occurred
-	if queryLongUrl == longUrl {
+	if queryLongUrl != longUrl {
 		return "", &ShortUrlCollision{longUrl1: longUrl, longUrl2: queryLongUrl}
 	}
 
 	return shortUrl, nil
 }
 
-func (r *PgUrlRepo) Close() error {
-	return r.conn.Close(*r.ctx)
+func (r *PgUrlRepo) Close() {
+	r.pool.Close()
 }

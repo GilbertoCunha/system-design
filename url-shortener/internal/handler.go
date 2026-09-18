@@ -15,11 +15,17 @@ type ShortUrl struct {
 	ShortUrl string `json:"shortUrl"`
 }
 
-func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService, shortUrl string) {
-	longUrl, err := s.GetLongUrl(shortUrl)
+func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService) {
+	shortUrl := r.PathValue("code")
+	longUrl, err := s.GetLongUrl(r.Context(), shortUrl)
 
-	if _, ok := errors.AsType[*InvalidUrlError](err); ok {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+	_, invalidShortUrlOk := errors.AsType[*InvalidShortUrl](err)
+	_, shortUrlNotFoundOk := errors.AsType[*ShortUrlNotFound](err)
+	if invalidShortUrlOk {
+		http.Error(w, "short url is invalid", http.StatusBadRequest)
+		return
+	} else if shortUrlNotFoundOk {
+		http.Error(w, "short url not found", http.StatusNotFound)
 		return
 	} else if err != nil {
 		log.Printf("Internal server error: %v", err)
@@ -27,15 +33,8 @@ func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerSer
 		return
 	}
 
-	resp := &LongUrl{LongUrl: longUrl}
-	b, err := json.Marshal(resp)
-	if err != nil {
-		log.Printf("Internal server error: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(b)
+	// TODO: Change to temporary redirect for click rate
+	http.Redirect(w, r, longUrl, http.StatusFound)
 }
 
 func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService) {
@@ -46,14 +45,10 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 		return
 	}
 
-	shortUrl, err := s.ShortenUrl(body.LongUrl)
-	invalidShortUrlError, invalidShortUrlOk := errors.AsType[*InvalidShortUrl](err)
-	shortUrlNotFoundError, shortUrlNotFoundOk := errors.AsType[*ShortUrlNotFound](err)
-	if invalidShortUrlOk {
-		http.Error(w, invalidShortUrlError.Error(), http.StatusBadRequest)
+	shortUrl, err := s.ShortenUrl(r.Context(), body.LongUrl)
+	if _, ok := errors.AsType[*InvalidUrl](err); ok {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
-	} else if shortUrlNotFoundOk {
-		http.Error(w, shortUrlNotFoundError.Error(), http.StatusBadRequest)
 	} else if err != nil {
 		log.Printf("Internal server error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -69,5 +64,9 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(b)
+	_, err = w.Write(b)
+	if err != nil {
+		log.Printf("Internal server error: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
