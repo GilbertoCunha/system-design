@@ -1,0 +1,55 @@
+---
+version: "3"
+
+env:
+  PG_DSN: postgresql://url_shortener:1234567890@localhost:5432/url_shortener
+
+tasks:
+  ###########
+  # Secrets #
+  ###########
+
+  secrets:load:*:
+    env:
+      ENV: "{{index .MATCH 0}}"
+    cmds:
+      - echo $ENV
+
+  ###################
+  # Docker commands #
+  ###################
+
+  docker:up:
+    cmds:
+      - docker compose up --build -d
+
+  docker:down:
+    cmds:
+      - docker compose down
+
+  ##############
+  # Migrations #
+  ##############
+
+  migrations:new:
+    cmds:
+      - |
+        goose postgres $PG_DSN \
+        create migrate sql --dir internal/database/migrations
+
+  ##########
+  # Checks #
+  ##########
+
+  go:check:
+    cmds:
+      - go build ./...
+      - go vet ./...
+
+  ########
+  # Sqlc #
+  ########
+
+  sqlc:generate:
+    cmds:
+      - sqlc generate
