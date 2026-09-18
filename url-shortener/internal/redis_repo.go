@@ -27,3 +27,7 @@ func (r *RedisUrlRepo) GetLongUrl(shortUrl string) (string, error) {
 func (r *RedisUrlRepo) PutShortUrl(shortUrl string, longUrl string) (string, error) {
 	return "", nil
 }
+
+func (r *RedisUrlRepo) Close() error {
+	return r.client.Close()
+}

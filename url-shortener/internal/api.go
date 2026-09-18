@@ -2,14 +2,17 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 )
 
 type API struct {
-	server *http.Server
-	config *AppConfig
+	server    *http.Server
+	config    *AppConfig
+	pgRepo    *PgUrlRepo
+	redisRepo *RedisUrlRepo
 }
 
 func (a *API) Run() error {
@@ -17,7 +20,11 @@ func (a *API) Run() error {
 	return a.server.ListenAndServe()
 }
 
-func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
+func (a *API) Close() error {
+	return errors.Join(a.pgRepo.Close(), a.redisRepo.Close())
+}
+
+func NewAPI(ctx *context.Context, config *AppConfig) (*API, error) {
 	// Creates Repositories
 	pgRepo, err := NewPgUrlRepo(ctx, config)
 	if err != nil {
@@ -47,5 +54,10 @@ func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
 		Handler: mux,
 	}
 
-	return &API{server: server, config: config}, nil
+	return &API{
+		server:    server,
+		config:    config,
+		pgRepo:    pgRepo,
+		redisRepo: redisRepo,
+	}, nil
 }

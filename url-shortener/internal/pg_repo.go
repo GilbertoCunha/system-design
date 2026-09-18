@@ -8,12 +8,13 @@ import (
 )
 
 type PgUrlRepo struct {
+	ctx  *context.Context
 	conn *pgx.Conn
 }
 
-func NewPgUrlRepo(ctx context.Context, c *AppConfig) (*PgUrlRepo, error) {
+func NewPgUrlRepo(ctx *context.Context, c *AppConfig) (*PgUrlRepo, error) {
 	conn, err := pgx.Connect(
-		ctx,
+		*ctx,
 		fmt.Sprintf(
 			"postgres://%v:%v@%v:%v/%v",
 			c.Postgres.User,
@@ -26,7 +27,7 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig) (*PgUrlRepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PgUrlRepo{conn: conn}, nil
+	return &PgUrlRepo{ctx: ctx, conn: conn}, nil
 }
 
 func (r *PgUrlRepo) GetLongUrl(shortUrl string) (string, error) {
@@ -35,4 +36,8 @@ func (r *PgUrlRepo) GetLongUrl(shortUrl string) (string, error) {
 
 func (r *PgUrlRepo) PutShortUrl(shortUrl string, longUrl string) (string, error) {
 	return "", nil
+}
+
+func (r *PgUrlRepo) Close() error {
+	return r.conn.Close(*r.ctx)
 }
