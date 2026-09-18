@@ -2,8 +2,16 @@
 services:
   api:
     build: .
+    command:
+      - --environment
+      - local
     ports:
       - "8080:8080"
+    environment:
+      POSTGRES_USER: url_shortener
+      POSTGRES_PASSWORD: 1234567890
+      REDIS_USER: default
+      REDIS_PASSWORD: 1234567890
 
   database:
     image: postgres:18.6

@@ -1,20 +1,22 @@
 package internal
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
 
 type API struct {
 	server *http.Server
+	config *AppConfig
 }
 
 func (a *API) Run() error {
-	log.Print("Server started...")
+	log.Printf("Server started on port %v.", a.config.App.Port)
 	return a.server.ListenAndServe()
 }
 
-func NewAPI() *API {
+func NewAPI(config *AppConfig) *API {
 	// Creates Services
 	urlShortener := &UrlShortenerService{}
 
@@ -30,9 +32,9 @@ func NewAPI() *API {
 
 	// Server definition
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", config.App.Port),
 		Handler: mux,
 	}
 
-	return &API{server: server}
+	return &API{server: server, config: config}
 }

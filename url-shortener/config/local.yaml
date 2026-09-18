@@ -1,0 +1,12 @@
+---
+app:
+  port: 8080
+
+postgres:
+  host: database
+  port: 5432
+  db_name: url_shortener
+
+redis:
+  host: cache
+  port: 6379
