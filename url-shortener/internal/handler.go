@@ -14,7 +14,7 @@ type ShortUrl struct {
 	ShortUrl string `json:"shortUrl"`
 }
 
-func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s *UrlShortenerService, shortUrl string) {
+func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService, shortUrl string) {
 	longUrl, err := s.GetLongUrl(shortUrl)
 	if err != nil {
 		log.Printf("Internal server error: %v", err)
@@ -33,7 +33,7 @@ func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s *UrlShortenerSe
 	w.Write(b)
 }
 
-func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s *UrlShortenerService) {
+func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService) {
 	var body LongUrl
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

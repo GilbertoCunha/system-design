@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,9 +17,19 @@ func (a *API) Run() error {
 	return a.server.ListenAndServe()
 }
 
-func NewAPI(config *AppConfig) *API {
+func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
+	// Creates Repositories
+	pgRepo, err := NewPgUrlRepo(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	redisRepo := NewRedisUrlRepo(config)
+
 	// Creates Services
-	urlShortener := &UrlShortenerService{}
+	urlShortener := NewUrlShortenerService(
+		pgRepo,
+		redisRepo,
+	)
 
 	// Handler definition
 	mux := http.NewServeMux()
@@ -36,5 +47,5 @@ func NewAPI(config *AppConfig) *API {
 		Handler: mux,
 	}
 
-	return &API{server: server, config: config}
+	return &API{server: server, config: config}, nil
 }

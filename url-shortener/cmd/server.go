@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 
@@ -19,6 +20,10 @@ func main() {
 		log.Fatal("An error occurred while parsing the configuration file: ", err)
 	}
 
-	api := internal.NewAPI(config)
+	ctx := context.Background()
+	api, err := internal.NewAPI(ctx, config)
+	if err != nil {
+		log.Fatal("An error occurred when creating the API: ", err)
+	}
 	log.Fatal(api.Run())
 }

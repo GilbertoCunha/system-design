@@ -24,6 +24,6 @@ func (r *RedisUrlRepo) GetLongUrl(shortUrl string) (string, error) {
 	return "", nil
 }
 
-func (r *RedisUrlRepo) PutShortUrl(shortUrl string) (string, error) {
+func (r *RedisUrlRepo) PutShortUrl(shortUrl string, longUrl string) (string, error) {
 	return "", nil
 }

@@ -12,6 +12,9 @@ services:
       POSTGRES_PASSWORD: 1234567890
       REDIS_USER: default
       REDIS_PASSWORD: 1234567890
+    depends_on:
+      - cache
+      - database
 
   database:
     image: postgres:18.6
