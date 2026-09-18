@@ -33,12 +33,10 @@ func (q *Queries) GetLongUrl(ctx context.Context, shortUrl string) (string, erro
 	return long_url, err
 }
 
-const putShortUrl = `-- name: PutShortUrl :exec
-INSERT INTO urls (
-  short_url, long_url
-) VALUES (
-  $1, $2
-)
+const putShortUrl = `-- name: PutShortUrl :one
+INSERT INTO urls (short_url, long_url) VALUES ($1, $2)
+ON CONFLICT (short_url) DO UPDATE SET long_url = urls.long_url
+RETURNING long_url
 `
 
 type PutShortUrlParams struct {
@@ -46,7 +44,9 @@ type PutShortUrlParams struct {
 	LongUrl  string
 }
 
-func (q *Queries) PutShortUrl(ctx context.Context, arg PutShortUrlParams) error {
-	_, err := q.db.Exec(ctx, putShortUrl, arg.ShortUrl, arg.LongUrl)
-	return err
+func (q *Queries) PutShortUrl(ctx context.Context, arg PutShortUrlParams) (string, error) {
+	row := q.db.QueryRow(ctx, putShortUrl, arg.ShortUrl, arg.LongUrl)
+	var long_url string
+	err := row.Scan(&long_url)
+	return long_url, err
 }

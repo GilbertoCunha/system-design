@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
@@ -16,7 +17,11 @@ type ShortUrl struct {
 
 func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerService, shortUrl string) {
 	longUrl, err := s.GetLongUrl(shortUrl)
-	if err != nil {
+
+	if _, ok := errors.AsType[*InvalidUrlError](err); ok {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	} else if err != nil {
 		log.Printf("Internal server error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -42,7 +47,14 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 	}
 
 	shortUrl, err := s.ShortenUrl(body.LongUrl)
-	if err != nil {
+	invalidShortUrlError, invalidShortUrlOk := errors.AsType[*InvalidShortUrl](err)
+	shortUrlNotFoundError, shortUrlNotFoundOk := errors.AsType[*ShortUrlNotFound](err)
+	if invalidShortUrlOk {
+		http.Error(w, invalidShortUrlError.Error(), http.StatusBadRequest)
+		return
+	} else if shortUrlNotFoundOk {
+		http.Error(w, shortUrlNotFoundError.Error(), http.StatusBadRequest)
+	} else if err != nil {
 		log.Printf("Internal server error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
