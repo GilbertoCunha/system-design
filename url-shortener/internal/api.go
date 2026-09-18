@@ -20,13 +20,17 @@ func NewAPI() *API {
 
 	// Handler definition
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		RequestHandler(w, r, urlShortener)
+	mux.HandleFunc("GET /{code}", func(w http.ResponseWriter, r *http.Request) {
+		shortUrl := r.PathValue("code")
+		GetLongUrlHandler(w, r, urlShortener, shortUrl)
+	})
+	mux.HandleFunc("POST /", func(w http.ResponseWriter, r *http.Request) {
+		CreateShortUrlHandler(w, r, urlShortener)
 	})
 
 	// Server definition
 	server := &http.Server{
-		Addr:    ":80",
+		Addr:    ":8080",
 		Handler: mux,
 	}
 
