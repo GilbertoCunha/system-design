@@ -10,6 +10,16 @@ import (
 
 var apiClient *APIClient = NewAPIClient()
 
+var _ = Describe("Responds to health checks", func() {
+	It("Responds properly", func() {
+		By("Querying the health endpoint")
+		resp, err := apiClient.Health()
+		Expect(err).To(BeNil())
+		By("Checking an ok status code")
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	})
+})
+
 var _ = Describe("Create short Urls works properly", func() {
 	Context("When creating from a valid url", func() {
 		It("Works when creating a new URL", func() {
@@ -78,4 +88,27 @@ var _ = Describe("Retrieving longUrls works properly", func() {
 		Entry("Too long", strings.Repeat("a", 33)),
 		Entry("Contains characters outside HEX range", strings.Repeat("a", 31)+"h"),
 	)
+
+	It("Retrieving a non-existing URL reports a 404", func() {
+		By("Retrieving a longUrl")
+		resp, _, err := apiClient.GetLongUrl(strings.Repeat("0", 32))
+		Expect(err).To(BeNil())
+		By("Checking for a 404")
+		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+	})
+
+	It("longUrl retrieval works properly", func() {
+		By("Creating a new shortUrl")
+		longUrl := "https://tinyurl.com"
+		resp, surl, err := apiClient.CreateShortUrl(longUrl)
+		Expect(err).To(BeNil())
+		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+		By("Retrieving shortUrl")
+		resp, lurl, err := apiClient.GetLongUrl(surl.ShortUrl)
+		Expect(err).To(BeNil())
+		By("Getting a successful status code")
+		Expect(resp.StatusCode).To(Equal(http.StatusFound))
+		By("Retrieving the same longUrl that was requested to shorten")
+		Expect(lurl.LongUrl).To(Equal(longUrl))
+	})
 })

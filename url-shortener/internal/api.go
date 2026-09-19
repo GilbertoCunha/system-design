@@ -62,6 +62,9 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 
 	// Handler definition
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 	mux.HandleFunc("GET /api/v1/url/{code}", func(w http.ResponseWriter, r *http.Request) {
 		GetLongUrlHandler(w, r, urlShortener, logger)
 	})

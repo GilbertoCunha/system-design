@@ -16,8 +16,18 @@ type APIClient struct {
 func NewAPIClient() *APIClient {
 	return &APIClient{
 		BaseURL: "http://localhost:8080", // TODO: port hard coded here
-		Client:  http.DefaultClient,
+		Client: &http.Client{
+			// Return the redirect itself instead of following it, so tests can
+			// assert on the 302 status and the Location header.
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
 	}
+}
+
+func (c *APIClient) Health() (*http.Response, error) {
+	return c.Client.Get(c.BaseURL + "/api/healthz")
 }
 
 func (c *APIClient) GetLongUrl(shortUrl string) (*http.Response, *internal.LongUrl, error) {
@@ -25,11 +35,8 @@ func (c *APIClient) GetLongUrl(shortUrl string) (*http.Response, *internal.LongU
 	resp, err := c.Client.Get(
 		c.BaseURL + "/api/v1/url/" + shortUrl,
 	)
-	if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		longUrl = &internal.LongUrl{}
-		if err := json.NewDecoder(resp.Body).Decode(longUrl); err != nil {
-			return nil, nil, err
-		}
+	if err == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		longUrl = &internal.LongUrl{LongUrl: resp.Header.Get("Location")}
 	}
 
 	return resp, longUrl, err

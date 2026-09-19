@@ -53,3 +53,14 @@ tasks:
   sqlc:generate:
     cmds:
       - sqlc generate
+
+  #########
+  # Tests #
+  #########
+
+  test:e2e:
+    deps:
+      - task: docker:up
+    cmds:
+      - go clean -testcache
+      - go test ./test/e2e/...
