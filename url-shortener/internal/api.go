@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -14,13 +14,14 @@ type API struct {
 	config    *AppConfig
 	pgRepo    *PgUrlRepo
 	redisRepo *RedisUrlRepo
+	logger    *slog.Logger
 }
 
 func (a *API) Run(ctx context.Context) error {
 	errChn := make(chan error, 1)
 
 	go func() {
-		log.Printf("Server started on port %v.", a.config.App.Port)
+		a.logger.Info("Server started", "port", a.config.App.Port)
 		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChn <- err
 		}
@@ -30,7 +31,7 @@ func (a *API) Run(ctx context.Context) error {
 	case err := <-errChn:
 		return err
 	case <-ctx.Done():
-		log.Println("Shutdown signal received.")
+		a.logger.Info("Shutdown signal received.")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -44,7 +45,7 @@ func (a *API) Close() error {
 	return a.redisRepo.Close()
 }
 
-func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
+func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, error) {
 	// Creates Repositories
 	pgRepo, err := NewPgUrlRepo(ctx, config)
 	if err != nil {
@@ -56,15 +57,16 @@ func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
 	urlShortener := NewUrlShortenerService(
 		pgRepo,
 		redisRepo,
+		logger,
 	)
 
 	// Handler definition
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/url/{code}", func(w http.ResponseWriter, r *http.Request) {
-		GetLongUrlHandler(w, r, urlShortener)
+		GetLongUrlHandler(w, r, urlShortener, logger)
 	})
 	mux.HandleFunc("POST /api/v1/url", func(w http.ResponseWriter, r *http.Request) {
-		CreateShortUrlHandler(w, r, urlShortener)
+		CreateShortUrlHandler(w, r, urlShortener, logger)
 	})
 
 	// Server definition
@@ -75,6 +77,7 @@ func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
 		ReadTimeout:       time.Duration(config.App.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout:      time.Duration(config.App.WriteTimeoutSeconds) * time.Second,
 		IdleTimeout:       time.Duration(config.App.IdleTimeoutSeconds) * time.Second,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
 	return &API{
@@ -82,5 +85,6 @@ func NewAPI(ctx context.Context, config *AppConfig) (*API, error) {
 		config:    config,
 		pgRepo:    pgRepo,
 		redisRepo: redisRepo,
+		logger:    logger,
 	}, nil
 }

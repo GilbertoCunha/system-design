@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"time"
@@ -12,12 +12,14 @@ import (
 type UrlShortenerService struct {
 	dbUrlRepo    UrlRepo
 	cacheUrlRepo UrlRepo
+	logger       *slog.Logger
 }
 
-func NewUrlShortenerService(dbRepo UrlRepo, cacheRepo UrlRepo) UrlShortenerService {
+func NewUrlShortenerService(dbRepo UrlRepo, cacheRepo UrlRepo, logger *slog.Logger) UrlShortenerService {
 	return UrlShortenerService{
 		dbUrlRepo:    dbRepo,
 		cacheUrlRepo: cacheRepo,
+		logger:       logger,
 	}
 }
 
@@ -50,7 +52,7 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 		if dberr != nil && !collision {
 			return "", dberr
 		} else if dberr != nil {
-			log.Printf("COLLISION for hash %s of url %s", shortUrl, urlToHash)
+			u.logger.Warn("hash collision", "hash", shortUrl, "url", urlToHash)
 			urlToHash += "1" // add suffix to hash again
 		} else {
 			ok = true

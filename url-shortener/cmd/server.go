@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,13 +13,16 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Println(err)
+	logger := internal.NewLogger(os.Stdout, slog.LevelInfo)
+	slog.SetDefault(logger)
+
+	if err := run(logger); err != nil {
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(logger *slog.Logger) error {
 	environmentStr := flag.String("environment", "local", "the environment in which to run on.")
 	flag.Parse()
 
@@ -35,13 +38,13 @@ func run() error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	api, err := internal.NewAPI(ctx, config)
+	api, err := internal.NewAPI(ctx, config, logger)
 	if err != nil {
 		return fmt.Errorf("an error occurred when creating the API: %w", err)
 	}
 	defer func() {
 		if cerr := api.Close(); cerr != nil {
-			log.Println("error closing API resources:", cerr)
+			logger.Error("error closing API resources", "err", cerr)
 		}
 	}()
 

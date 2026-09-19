@@ -36,25 +36,7 @@ Known gaps and deferred work. Roughly ordered by impact.
       database: `GetMD5Hash`, the short-URL regexp, URL validation, normalization,
       and the duplicate-vs-collision decision in `PgUrlRepo.PutShortUrl`.
 
-## Deployment
-
-- [ ] **Dockerfile: runs as root.** Add `USER 65534:65534`. Numeric UID is required
-      because `scratch` has no `/etc/passwd`.
-- [ ] **Dockerfile: no CA certificates.** `scratch` has no trust store, so any
-      outbound TLS fails with `x509: certificate signed by unknown authority`.
-      Copy the bundle from the builder stage before it's needed.
-- [ ] **Dockerfile: builds `./cmd/server.go`, not `./cmd`.** Naming a single file
-      compiles only that file; any other file added to `package main` is silently
-      ignored.
-- [ ] **No volume on the `database` service** in docker-compose, so Postgres data is
-      discarded on `docker compose down`. Intentional for local dev — noted so it
-      isn't mistaken for a migration failure.
-
 ## Nits
 
-- [ ] `handler.go`: `http.Error` is called if `w.Write` fails, but the status and
-      headers are already sent by then, so it can't do anything. Log and return.
-- [ ] Logging uses the stdlib `log` with no levels or structure. `log/slog` is in the
-      standard library and costs nothing to adopt this early.
 - [ ] Hardcoded 500ms query timeouts in `service.go` could live in `AppConfig`
       alongside the HTTP timeouts.
