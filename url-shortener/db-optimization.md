@@ -47,43 +47,7 @@ One caveat: if a concurrent transaction inserts the same key between the two
 branches, both can come back empty and we get `pgx.ErrNoRows`. Rare, but it
 should be treated as retryable rather than a 500.
 
-### Related: the schema
-
-`id BIGSERIAL PRIMARY KEY` adds a second index and a sequence to maintain on
-every insert, and nothing reads `id`. `short_url` could be the primary key
-directly.
-
-## 2. `synchronous_commit`
-
-Every `COMMIT` normally waits for Postgres to physically flush the write-ahead
-log to disk before replying. That's an fsync — milliseconds, and it doesn't get
-faster under load, it gets slower as the queue grows.
-
-`synchronous_commit=off` lets the commit return as soon as the WAL is in memory;
-the flush happens a moment later in the background.
-
-```yaml
-  database:
-    image: postgres:18.6
-    command:
-      - postgres
-      - -c
-      - synchronous_commit=off
-      - -c
-      - shared_buffers=1GB
-```
-
-**The tradeoff:** if the server loses power, we lose the last ~200ms of
-transactions that were reported as committed. The database is *not* corrupted,
-and it recovers cleanly — we just lose the tail.
-
-This is very different from `fsync=off`, which *can* corrupt. Don't use that one.
-
-For a URL shortener, losing a few hundred milliseconds of shortened links on a
-hard crash is usually acceptable. To scope it more narrowly, set it
-per-transaction on just the insert instead of globally.
-
-# 3. Fast-fail vs slow-fail
+# 2. Fast-fail vs slow-fail
 
 Today one 500ms budget covers *both* waiting for a connection and running the
 query. Under overload almost all of it is waiting. So a doomed request sits there
@@ -117,10 +81,3 @@ Then surface it honestly in the handler: a `503` with a `Retry-After` header, no
 a `500`. "I'm busy, come back" is a different thing from "I'm broken," and it
 tells the load test the difference too.
 
-## A note on the timeout itself
-
-Raising the 500ms deadline is tempting and counterproductive. A timeout cannot
-create capacity; it only chooses who fails. Raising it under overload means more
-requests in flight simultaneously, deeper queues, more memory, and a longer wait
-before a doomed request gives up — more failures, not fewer. The deadline isn't
-the bug; it's load-shedding doing its job, just badly placed. See §4.
