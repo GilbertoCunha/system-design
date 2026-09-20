@@ -62,10 +62,16 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 }
 
 func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error) {
+	start := time.Now()
 	queryLongUrl, err := r.queries.PutShortUrl(
 		ctx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
+	elapsed := time.Since(start)
+	r.logger.Debug("query:PutShortUrl",
+		"time_ms", elapsed/time.Millisecond,
+	)
+
 	if err != nil {
 		return "", err
 	}

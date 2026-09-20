@@ -9,7 +9,6 @@ import (
 )
 
 type Url struct {
-	ID        int64
 	ShortUrl  string
 	LongUrl   string
 	CreatedAt pgtype.Timestamptz

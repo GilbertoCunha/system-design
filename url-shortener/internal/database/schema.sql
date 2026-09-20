@@ -1,6 +1,5 @@
 CREATE table IF NOT EXISTS urls (
-  id BIGSERIAL PRIMARY KEY,
-  short_url TEXT UNIQUE NOT NULL,
+  short_url TEXT PRIMARY KEY,
   long_url TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

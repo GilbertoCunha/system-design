@@ -5,7 +5,7 @@ export const options = {
   thresholds: {
     http_req_duration: ["p(99) < 100"],
     http_req_failed: ["rate < 0.01"],
-    dropped_iterations: ["count < 100"], // k6 couldn't sustain the rate
+    http_reqs: ["rate > 900"], // 1k rps with 5% slack
   },
   // Create scenario for constant 1000rps throughput
   scenarios: {

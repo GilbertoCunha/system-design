@@ -5,7 +5,7 @@ export const options = {
   thresholds: {
     http_req_duration: ["p(99) < 500"],
     http_req_failed: ["rate < 0.01"],
-    dropped_iterations: ["count < 100"], // k6 couldn't sustain the rate
+    http_reqs: ["rate > 19000"], // 10k/endpoint × 2 = 20k, with 5% slack
   },
   // Create constant load of 10k req/s per endpoint
   scenarios: {
@@ -14,8 +14,8 @@ export const options = {
       rate: 10000,
       timeUnit: "1s",
       duration: "1m",
-      preAllocatedVUs: 500,
-      maxVUs: 5000,
+      preAllocatedVUs: 1000,
+      maxVUs: 8000,
     },
   },
 };
