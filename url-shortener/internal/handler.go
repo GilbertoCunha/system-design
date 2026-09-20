@@ -19,13 +19,16 @@ func GetLongUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortenerSer
 	shortUrl := r.PathValue("code")
 	longUrl, err := s.GetLongUrl(r.Context(), shortUrl)
 
-	_, invalidShortUrlOk := errors.AsType[*InvalidShortUrl](err)
-	_, shortUrlNotFoundOk := errors.AsType[*ShortUrlNotFound](err)
-	if invalidShortUrlOk {
+	if _, ok := errors.AsType[*InvalidShortUrl](err); ok {
 		http.Error(w, "short url is invalid", http.StatusBadRequest)
 		return
-	} else if shortUrlNotFoundOk {
+	} else if _, ok := errors.AsType[*ShortUrlNotFound](err); ok {
 		http.Error(w, "short url not found", http.StatusNotFound)
+		return
+	} else if _, ok := errors.AsType[*Overloaded](err); ok {
+		// If server is overloaded, ask to retry request after 5 seconds
+		w.Header().Add("Retry-After", "5")
+		w.WriteHeader(503)
 		return
 	} else if err != nil {
 		logger.Warn("Internal server error", "err", err)
@@ -48,6 +51,11 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 	shortUrl, err := s.ShortenUrl(r.Context(), body.LongUrl)
 	if _, ok := errors.AsType[*InvalidUrl](err); ok {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	} else if _, ok := errors.AsType[*Overloaded](err); ok {
+		// If server is overloaded, ask to retry request after 5 seconds
+		w.Header().Add("Retry-After", "5")
+		w.WriteHeader(503)
 		return
 	} else if err != nil {
 		logger.Warn("Internal server error", "err", err)

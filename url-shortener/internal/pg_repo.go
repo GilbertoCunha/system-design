@@ -13,9 +13,8 @@ import (
 )
 
 type PgUrlRepo struct {
-	pool    *pgxpool.Pool
-	queries *database.Queries
-	logger  *slog.Logger
+	pool   *pgxpool.Pool
+	logger *slog.Logger
 }
 
 func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUrlRepo, error) {
@@ -27,12 +26,14 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUr
 		c.Postgres.Port,
 		c.Postgres.DbName,
 	)
+
 	config, err := pgxpool.ParseConfig(dsn)
-	config.MaxConns = int32(c.Postgres.Pool.MaxConns)
-	config.MinConns = int32(c.Postgres.Pool.MinConns)
 	if err != nil {
 		return nil, err
 	}
+	config.MaxConns = int32(c.Postgres.Pool.MaxConns)
+	config.MinConns = int32(c.Postgres.Pool.MinConns)
+
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, err
@@ -41,14 +42,26 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUr
 	// Start background process for connection pool statistics gathering
 	go getPoolStats(ctx, pool, logger, 5)
 
-	return &PgUrlRepo{pool: pool, queries: database.New(pool), logger: logger}, nil
+	return &PgUrlRepo{pool: pool, logger: logger}, nil
 }
 
 func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
+	acqCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	conn, err := r.pool.Acquire(acqCtx)
+	cancel()
+	if err != nil {
+		r.logger.Warn("db_conn_acquire_timeout",
+			"query", "GetLongUrl",
+		)
+		return "", &Overloaded{}
+	}
+	defer conn.Release()
+
 	start := time.Now()
-	longUrl, err := r.queries.GetLongUrl(ctx, shortUrl)
+	longUrl, err := database.New(conn).GetLongUrl(ctx, shortUrl)
 	elapsed := time.Since(start)
-	r.logger.Debug("query:GetLongUrl",
+	r.logger.Debug("query_time",
+		"query", "GetLongUrl",
 		"time_ms", elapsed/time.Millisecond,
 	)
 
@@ -62,13 +75,25 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 }
 
 func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error) {
+	acqCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	conn, err := r.pool.Acquire(acqCtx)
+	cancel()
+	if err != nil {
+		r.logger.Warn("db_conn_acquire_timeout",
+			"query", "PutShortUrl",
+		)
+		return "", &Overloaded{}
+	}
+	defer conn.Release()
+
 	start := time.Now()
-	queryLongUrl, err := r.queries.PutShortUrl(
+	queryLongUrl, err := database.New(conn).PutShortUrl(
 		ctx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
 	elapsed := time.Since(start)
-	r.logger.Debug("query:PutShortUrl",
+	r.logger.Debug("query_time",
+		"query", "PutShortUrl",
 		"time_ms", elapsed/time.Millisecond,
 	)
 

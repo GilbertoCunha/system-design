@@ -4,6 +4,12 @@ import (
 	"fmt"
 )
 
+type Overloaded struct{}
+
+func (e *Overloaded) Error() string {
+	return "Server overloaded, try again later"
+}
+
 type InvalidUrl struct {
 	url     string
 	message string
