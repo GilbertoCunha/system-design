@@ -7,47 +7,7 @@ context expires and the handler returns `Internal server error`.
 
 These are four of the levers worth pulling, and how each one actually works.
 
-## 1. Query optimization: the `ON CONFLICT` rewrite
-
-Postgres never edits a row in place. An `UPDATE` writes a **new copy** of the row
-and marks the old one dead (to be cleaned up later by autovacuum). So this, in
-`internal/database/query.sql`:
-
-```sql
-ON CONFLICT (short_url) DO UPDATE SET long_url = urls.long_url
-```
-
-sets the column to the value it already has — but Postgres can't tell that's
-pointless. Every duplicate insert still costs a full row write, an index update,
-WAL, and a dead tuple. We pay write cost for a no-op.
-
-`DO NOTHING` skips the write, but then `RETURNING` gives nothing back, and
-`PutShortUrl` needs the stored `long_url` to detect hash collisions. A CTE gets
-both in one round trip:
-
-```sql
--- name: PutShortUrl :one
-WITH inserted AS (
-  INSERT INTO urls (short_url, long_url) VALUES ($1, $2)
-  ON CONFLICT (short_url) DO NOTHING
-  RETURNING long_url
-)
-SELECT long_url FROM inserted
-UNION ALL
-SELECT long_url FROM urls WHERE short_url = $1
-LIMIT 1;
-```
-
-Insert succeeds → returns the new `long_url`. Conflict → the insert writes
-nothing, and the second branch reads the existing one. The Go code in
-`internal/pg_repo.go` and its collision check work unchanged; re-run
-`sqlc generate`.
-
-One caveat: if a concurrent transaction inserts the same key between the two
-branches, both can come back empty and we get `pgx.ErrNoRows`. Rare, but it
-should be treated as retryable rather than a 500.
-
-# 2. Fast-fail vs slow-fail
+# 1. Fast-fail vs slow-fail
 
 Today one 500ms budget covers *both* waiting for a connection and running the
 query. Under overload almost all of it is waiting. So a doomed request sits there

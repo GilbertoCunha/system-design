@@ -34,9 +34,16 @@ func (q *Queries) GetLongUrl(ctx context.Context, shortUrl string) (string, erro
 }
 
 const putShortUrl = `-- name: PutShortUrl :one
-INSERT INTO urls (short_url, long_url) VALUES ($1, $2)
-ON CONFLICT (short_url) DO UPDATE SET long_url = urls.long_url
-RETURNING long_url
+WITH inserted AS (
+  INSERT INTO urls (short_url, long_url) VALUES ($1, $2)
+  ON CONFLICT (short_url) DO NOTHING
+  RETURNING long_url
+)
+SELECT long_url FROM inserted
+UNION ALL
+SELECT long_url FROM urls
+WHERE short_url = $1
+LIMIT 1
 `
 
 type PutShortUrlParams struct {
