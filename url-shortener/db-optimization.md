@@ -83,73 +83,7 @@ For a URL shortener, losing a few hundred milliseconds of shortened links on a
 hard crash is usually acceptable. To scope it more narrowly, set it
 per-transaction on just the insert instead of globally.
 
-## 3. Logging connection pool statistics
-
-The point: `AcquireDuration` is time spent **waiting for a free connection**; it
-is not query time. Comparing the two tells us whether the problem is pool size or
-the database itself. Right now we can't tell them apart, which means every other
-item on this list is a guess.
-
-Worth knowing: `internal/pg_repo.go:19` calls `pgxpool.New` with no config, so
-`MaxConns` defaults to `max(4, runtime.NumCPU())` — roughly 8–10 connections. And
-`MinConns` defaults to 0, so connections are established lazily, meaning a steep
-VU ramp pays connection-setup cost at the worst possible moment.
-
-```go
-func LogPoolStats(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	var prev *pgxpool.Stat
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			s := pool.Stat()
-			if prev != nil {
-				acquires := s.AcquireCount() - prev.AcquireCount()
-				waited := s.AcquireDuration() - prev.AcquireDuration()
-				if acquires > 0 {
-					logger.Info("pool",
-						"avg_wait", waited/time.Duration(acquires),
-						"empty_acquires", s.EmptyAcquireCount()-prev.EmptyAcquireCount(),
-						"in_use", s.AcquiredConns(),
-						"total", s.TotalConns(),
-						"max", s.MaxConns(),
-					)
-				}
-			}
-			prev = s
-		}
-	}
-}
-```
-
-How to read it:
-
-| Observation | Meaning |
-| --- | --- |
-| `avg_wait` near zero, requests still slow | Pool is fine; Postgres is the bottleneck (see §1, §2) |
-| `avg_wait` in the hundreds of ms, `in_use` pinned at `max` | Starved for connections — raise `MaxConns` |
-| `empty_acquires` climbing fast | Requests routinely find zero free connections |
-
-Pair it with timing the query itself, so the wait can be subtracted:
-
-```go
-start := time.Now()
-longUrl, err := r.queries.GetLongUrl(ctx, shortUrl)
-logger.Debug("query", "op", "GetLongUrl", "took", time.Since(start))
-```
-
-### On raising `MaxConns`
-
-More is not linearly better. Postgres defaults to `max_connections=100`, and
-throughput *peaks* around 2–4× core count before declining — each connection is a
-backend process, so past that point we pay context-switching and lock contention
-to do less work. Going from ~10 to ~50 is likely a large win; going to 500 would
-be slower than 50.
-
-## 4. Fast-fail vs slow-fail
+# 3. Fast-fail vs slow-fail
 
 Today one 500ms budget covers *both* waiting for a connection and running the
 query. Under overload almost all of it is waiting. So a doomed request sits there

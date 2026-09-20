@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/GilbertoCunha/system-design/url-shortener/internal/database"
 	pgx "github.com/jackc/pgx/v5"
@@ -13,29 +15,43 @@ import (
 type PgUrlRepo struct {
 	pool    *pgxpool.Pool
 	queries *database.Queries
+	logger  *slog.Logger
 }
 
-func NewPgUrlRepo(ctx context.Context, c *AppConfig) (*PgUrlRepo, error) {
-	pool, err := pgxpool.New(
-		ctx,
-		fmt.Sprintf(
-			"postgres://%v:%v@%v:%v/%v",
-			c.Postgres.User,
-			c.Postgres.Password,
-			c.Postgres.Host,
-			c.Postgres.Port,
-			c.Postgres.DbName,
-		),
+func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUrlRepo, error) {
+	dsn := fmt.Sprintf(
+		"postgres://%v:%v@%v:%v/%v",
+		c.Postgres.User,
+		c.Postgres.Password,
+		c.Postgres.Host,
+		c.Postgres.Port,
+		c.Postgres.DbName,
 	)
+	config, err := pgxpool.ParseConfig(dsn)
+	config.MaxConns = int32(c.Postgres.Pool.MaxConns)
+	config.MinConns = int32(c.Postgres.Pool.MinConns)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PgUrlRepo{pool: pool, queries: database.New(pool)}, nil
+	// Start background process for connection pool statistics gathering
+	go getPoolStats(ctx, pool, logger, 5)
+
+	return &PgUrlRepo{pool: pool, queries: database.New(pool), logger: logger}, nil
 }
 
 func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
+	start := time.Now()
 	longUrl, err := r.queries.GetLongUrl(ctx, shortUrl)
+	elapsed := time.Since(start)
+	r.logger.Debug("query:GetLongUrl",
+		"time_ms", elapsed/time.Millisecond,
+	)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", &ShortUrlNotFound{shortUrl: shortUrl}
@@ -66,4 +82,33 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 
 func (r *PgUrlRepo) Close() {
 	r.pool.Close()
+}
+
+func getPoolStats(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, frequencySeconds int) {
+	ticker := time.NewTicker(time.Duration(frequencySeconds) * time.Second)
+	defer ticker.Stop()
+	var prev *pgxpool.Stat
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cur := pool.Stat()
+			if prev != nil {
+				acquires := cur.AcquireCount() - prev.AcquireCount()
+				waited := cur.AcquireDuration() - prev.AcquireDuration()
+				if acquires > 0 {
+					logger.Info("pool",
+						"avg_wait_ms", waited/(time.Duration(acquires)*time.Millisecond),
+						"empty_acquires", cur.EmptyAcquireCount()-prev.EmptyAcquireCount(),
+						"in_use", cur.AcquiredConns(),
+						"idle", cur.IdleConns(),
+						"total", cur.TotalConns(),
+						"max", cur.MaxConns(),
+					)
+				}
+			}
+			prev = cur
+		}
+	}
 }

@@ -11,7 +11,10 @@ export function shortenAndVisit(baseUrl, url) {
   if (resp1.status !== 201) return resp1;
 
   const shortUrl = JSON.parse(resp1.body).shortUrl;
-  const resp2 = http.get(`${baseUrl}/api/v1/url/${shortUrl}`, { redirects: 0 });
+  const resp2 = http.get(`${baseUrl}/api/v1/url/${shortUrl}`, {
+    redirects: 0,
+    tags: { name: "GET /api/v1/url/:id" },
+  });
   check(resp2, {
     "visit shortUrl: 302": (r) => r.status === 302,
   });

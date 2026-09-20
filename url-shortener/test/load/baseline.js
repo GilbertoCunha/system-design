@@ -3,15 +3,21 @@ import { shortenUrl } from "./flows/shortenUrl.js";
 // Test configuration
 export const options = {
   thresholds: {
-    // Assert that 99% of requests finish within 100ms.
     http_req_duration: ["p(99) < 100"],
+    http_req_failed: ["rate < 0.01"],
+    dropped_iterations: ["count < 100"], // k6 couldn't sustain the rate
   },
-  // Ramp the number of virtual users up and down
-  stages: [
-    { duration: "10s", target: 15 },
-    { duration: "20s", target: 15 },
-    { duration: "5s", target: 0 },
-  ],
+  // Create scenario for constant 1000rps throughput
+  scenarios: {
+    writes: {
+      executor: "constant-arrival-rate",
+      rate: 1000,
+      timeUnit: "1s",
+      duration: "1m",
+      preAllocatedVUs: 50,
+      maxVUs: 2000,
+    },
+  },
 };
 
 // Simulated user behavior

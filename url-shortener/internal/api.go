@@ -47,7 +47,7 @@ func (a *API) Close() error {
 
 func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, error) {
 	// Creates Repositories
-	pgRepo, err := NewPgUrlRepo(ctx, config)
+	pgRepo, err := NewPgUrlRepo(ctx, config, logger)
 	if err != nil {
 		return nil, err
 	}
