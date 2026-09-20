@@ -64,3 +64,11 @@ tasks:
     cmds:
       - go clean -testcache
       - go test ./test/e2e/...
+
+  test:load:*:
+    deps:
+      - task: docker:up
+    env:
+      FILE: "{{index .MATCH 0}}"
+    cmds:
+      - k6 run test/load/$FILE.js
