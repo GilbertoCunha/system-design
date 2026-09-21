@@ -1,0 +1,23 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: url-shortener
+  labels:
+    app: url-shortener
+spec:
+  instances: 1
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 200Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+
+  storage:
+    size: 10Gi
+
+  monitoring:
+    enablePodMonitor: true

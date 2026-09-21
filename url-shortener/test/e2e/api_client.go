@@ -27,13 +27,13 @@ func NewAPIClient() *APIClient {
 }
 
 func (c *APIClient) Health() (*http.Response, error) {
-	return c.Client.Get(c.BaseURL + "/api/healthz")
+	return c.Client.Get(c.BaseURL + "/healthz")
 }
 
 func (c *APIClient) GetLongUrl(shortUrl string) (*http.Response, *internal.LongUrl, error) {
 	var longUrl *internal.LongUrl
 	resp, err := c.Client.Get(
-		c.BaseURL + "/api/v1/url/" + shortUrl,
+		c.BaseURL + "/v1/url/" + shortUrl,
 	)
 	if err == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		longUrl = &internal.LongUrl{LongUrl: resp.Header.Get("Location")}
@@ -51,7 +51,7 @@ func (c *APIClient) CreateShortUrl(url string) (*http.Response, *internal.ShortU
 	}
 
 	resp, err := c.Client.Post(
-		c.BaseURL+"/api/v1/url",
+		c.BaseURL+"/v1/url",
 		"application/json",
 		bytes.NewReader(body),
 	)
