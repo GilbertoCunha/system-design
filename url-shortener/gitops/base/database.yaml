@@ -2,9 +2,10 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: url-shortener
+  name: url-shortener-db
   labels:
     app: url-shortener
+    role: db
 spec:
   instances: 1
 

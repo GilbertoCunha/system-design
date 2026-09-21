@@ -2,9 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: url-shortener
+  name: url-shortener-backend
   labels:
     app: url-shortener
+    role: backend
 spec:
   replicas: 2
   # Spread pods across nodes
@@ -15,10 +16,12 @@ spec:
   selector:
     matchLabels:
       app: url-shortener
+      role: backend
   template:
     metadata:
       labels:
         app: url-shortener
+        role: backend
     spec:
       containers:
         - name: api
@@ -48,3 +51,21 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-backend
+  labels:
+    app: url-shortener
+    role: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: url-shortener
+    role: backend
+  ports:
+    - name: 8080-8080
+      port: 8080
+      protocol: TCP
+      targetPort: 8080

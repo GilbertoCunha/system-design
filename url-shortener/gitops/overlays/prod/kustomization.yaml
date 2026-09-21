@@ -7,4 +7,4 @@ resources:
 
 # TODO: Deploy patch too
 # patches:
-#   - path: backend/deployment.yaml
+#   - path: backend.yaml
