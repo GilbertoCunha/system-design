@@ -18,25 +18,46 @@ permissions:
   packages: write # push to ghcr.io
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: url-shortener-backend
+            context: url-shortener
+            dockerfile: Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
       - name: Build image
-        id: build
         uses: ./.github/actions/build-image
         with:
-          project: url-shortener
-          context: url-shortener
+          name: ${{ matrix.name }}
+          context: ${{ matrix.context }}
+          dockerfile: ${{ matrix.dockerfile }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Matrix jobs can't expose one output per leg, so rebuild the references
+      # the same way the build-image action does.
+      - name: Compute image registry
+        id: registry
+        shell: bash
+        run: echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Push manifests to gitops/dev
         uses: ./.github/actions/push-gitops
         with:
           gitops-dir: url-shortener/gitops
           overlay: dev
-          image: ${{ steps.build.outputs.image }}
+          images: |
+            url-shortener-backend=${{ steps.registry.outputs.repository }}:url-shortener-backend-${{ github.sha }}
           branch: gitops/dev
           target-path: url-shortener

@@ -1,16 +1,19 @@
 ---
 name: Build image
 description: >-
-  Build a project's Docker image and push it to GHCR as
-  ghcr.io/<owner>/<repo>:<project>-<git-sha>.
+  Build a Docker image and push it to GHCR as
+  ghcr.io/<owner>/<repo>:<name>-<git-sha>.
 
 inputs:
-  project:
-    description: Project name, used as the image tag prefix.
+  name:
+    description: Image name, used as the image tag prefix and build cache scope.
     required: true
   context:
     description: Docker build context, relative to the repository root.
     required: true
+  dockerfile:
+    description: Dockerfile to build, relative to the build context.
+    default: Dockerfile
   token:
     description: Token with packages:write permission.
     required: true
@@ -28,10 +31,10 @@ runs:
       id: image
       shell: bash
       env:
-        PROJECT: ${{ inputs.project }}
+        NAME: ${{ inputs.name }}
       run: |
         repository="${GITHUB_REPOSITORY,,}"
-        echo "ref=ghcr.io/${repository}:${PROJECT}-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        echo "ref=ghcr.io/${repository}:${NAME}-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
@@ -47,7 +50,8 @@ runs:
       uses: docker/build-push-action@v7
       with:
         context: ${{ inputs.context }}
+        file: ${{ inputs.context }}/${{ inputs.dockerfile }}
         push: true
         tags: ${{ steps.image.outputs.ref }}
-        cache-from: type=gha,scope=${{ inputs.project }}
-        cache-to: type=gha,mode=max,scope=${{ inputs.project }}
+        cache-from: type=gha,scope=${{ inputs.name }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.name }}

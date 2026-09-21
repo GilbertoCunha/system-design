@@ -1,9 +1,9 @@
 ---
 name: Push GitOps manifests
 description: >-
-  Copy a project's kustomize base and one overlay, substitute the image
-  placeholder, and commit the result to a GitOps branch. The source branch
-  is never modified. Requires the repository to be checked out with
+  Copy a project's kustomize base and one overlay, set the overlay's images
+  with `kustomize edit set image`, and commit the result to a GitOps branch.
+  The source branch is never modified. Requires the repository to be checked out with
   credentials that can push (contents:write).
 
 inputs:
@@ -13,8 +13,10 @@ inputs:
   overlay:
     description: Overlay to publish (e.g. dev).
     required: true
-  image:
-    description: Image reference that replaces the placeholder.
+  images:
+    description: >-
+      Images to set, one `<name>=<image reference>` per line, where <name> is
+      the image name used in the manifests (see kustomize `images`).
     required: true
   branch:
     description: Branch to push the rendered manifests to.
@@ -25,9 +27,6 @@ inputs:
       Only this directory is replaced, so each project sharing a branch must
       use its own.
     required: true
-  placeholder:
-    description: String in the manifests to replace with the image reference.
-    default: <replace-me>
 
 runs:
   using: composite
@@ -37,26 +36,34 @@ runs:
       env:
         GITOPS_DIR: ${{ inputs.gitops-dir }}
         OVERLAY: ${{ inputs.overlay }}
-        IMAGE: ${{ inputs.image }}
-        PLACEHOLDER: ${{ inputs.placeholder }}
+        IMAGES: ${{ inputs.images }}
       run: |
         out="${RUNNER_TEMP}/gitops-rendered"
         rm -rf "${out}"
         mkdir -p "${out}/overlays"
         cp -r "${GITOPS_DIR}/base" "${out}/base"
         cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
-        grep -rlF "${PLACEHOLDER}" "${out}" | xargs -r sed -i "s|${PLACEHOLDER}|${IMAGE}|g"
-        if grep -rqF "${PLACEHOLDER}" "${out}"; then
-          echo "::error::${PLACEHOLDER} placeholder still present after substitution"
-          exit 1
-        fi
+
+        mapfile -t images < <(sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' <<< "${IMAGES}")
+        cd "${out}/overlays/${OVERLAY}"
+        kustomize edit set image "${images[@]}"
+
+        # kustomize silently ignores names that match no container, so check
+        # every reference made it into the rendered output.
+        rendered="$(kustomize build .)"
+        for image in "${images[@]}"; do
+          if ! grep -qF "image: ${image#*=}" <<< "${rendered}"; then
+            echo "::error::Image name ${image%%=*} matches no container in overlay ${OVERLAY}"
+            exit 1
+          fi
+        done
 
     - name: Push manifests
       shell: bash
       env:
         BRANCH: ${{ inputs.branch }}
         TARGET_PATH: ${{ inputs.target-path }}
-        IMAGE: ${{ inputs.image }}
+        IMAGES: ${{ inputs.images }}
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -81,7 +88,8 @@ runs:
         if git -C "${worktree}" diff --cached --quiet; then
           echo "No manifest changes to push"
         else
-          git -C "${worktree}" commit -m "deploy: ${IMAGE}" -m "Source commit: ${GITHUB_SHA}"
+          git -C "${worktree}" commit -m "deploy: ${TARGET_PATH}@${GITHUB_SHA::7}" \
+            -m "${IMAGES}" -m "Source commit: ${GITHUB_SHA}"
           git -C "${worktree}" push origin "HEAD:refs/heads/${BRANCH}"
         fi
         git worktree remove --force "${worktree}"
