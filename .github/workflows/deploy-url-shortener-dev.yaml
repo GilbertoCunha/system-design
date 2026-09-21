@@ -57,7 +57,8 @@ jobs:
         with:
           gitops-dir: url-shortener/gitops
           overlay: dev
-          images: |
-            url-shortener-backend=${{ steps.registry.outputs.repository }}:url-shortener-backend-${{ github.sha }}
+          # TODO: Set the backend image once backend.yaml is deployed
+          # images: |
+          #   url-shortener-backend=${{ steps.registry.outputs.repository }}:url-shortener-backend-${{ github.sha }}
           branch: gitops/dev
           target-path: url-shortener

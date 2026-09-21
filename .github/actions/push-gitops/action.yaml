@@ -17,7 +17,8 @@ inputs:
     description: >-
       Images to set, one `<name>=<image reference>` per line, where <name> is
       the image name used in the manifests (see kustomize `images`).
-    required: true
+      Leave empty to publish the manifests unchanged.
+    default: ""
   branch:
     description: Branch to push the rendered manifests to.
     required: true
@@ -44,16 +45,20 @@ runs:
         cp -r "${GITOPS_DIR}/base" "${out}/base"
         cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
 
-        mapfile -t images < <(sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' <<< "${IMAGES}")
         cd "${out}/overlays/${OVERLAY}"
-        kustomize edit set image "${images[@]}"
+        # Unquoted on purpose: each line of IMAGES becomes its own loop item.
+        for image in ${IMAGES}; do
+          kustomize edit set image "${image}"
+        done
 
-        # kustomize silently ignores names that match no container, so check
-        # every reference made it into the rendered output.
-        rendered="$(kustomize build .)"
-        for image in "${images[@]}"; do
-          if ! grep -qF "image: ${image#*=}" <<< "${rendered}"; then
-            echo "::error::Image name ${image%%=*} matches no container in overlay ${OVERLAY}"
+        # kustomize silently skips names that match no container, so make sure
+        # every new image actually shows up in the final manifests.
+        manifests="$(kustomize build .)"
+        for image in ${IMAGES}; do
+          name="${image%%=*}"
+          ref="${image#*=}"
+          if ! grep -qF "${ref}" <<< "${manifests}"; then
+            echo "::error::No container uses image name ${name} in overlay ${OVERLAY}"
             exit 1
           fi
         done
