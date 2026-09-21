@@ -6,5 +6,5 @@ import (
 
 type UrlRepo interface {
 	GetLongUrl(ctx context.Context, shortUrl string) (string, error)
-	PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error)
+	PutShortUrl(ctx context.Context, shortUrl string, longUrl string) error
 }

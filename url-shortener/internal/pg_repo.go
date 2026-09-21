@@ -50,17 +50,18 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 	conn, err := r.pool.Acquire(acqCtx)
 	cancel()
 	if err != nil {
-		r.logger.Warn("db_conn_acquire_timeout",
+		r.logger.Warn("db:conn_acquire_timeout",
 			"query", "GetLongUrl",
 		)
 		return "", &Overloaded{}
 	}
 	defer conn.Release()
 
+	// TODO: Context timeout error handling
 	start := time.Now()
 	longUrl, err := database.New(conn).GetLongUrl(ctx, shortUrl)
 	elapsed := time.Since(start)
-	r.logger.Debug("query_time",
+	r.logger.Debug("db:query_time",
 		"query", "GetLongUrl",
 		"time_ms", elapsed/time.Millisecond,
 	)
@@ -74,41 +75,42 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 	return longUrl, nil
 }
 
-func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) (string, error) {
+func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) error {
 	acqCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 	conn, err := r.pool.Acquire(acqCtx)
 	cancel()
 	if err != nil {
-		r.logger.Warn("db_conn_acquire_timeout",
+		r.logger.Warn("db:conn_acquire_timeout",
 			"query", "PutShortUrl",
 		)
-		return "", &Overloaded{}
+		return &Overloaded{}
 	}
 	defer conn.Release()
 
+	// TODO: Context timeout error handling
 	start := time.Now()
 	queryLongUrl, err := database.New(conn).PutShortUrl(
 		ctx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
 	elapsed := time.Since(start)
-	r.logger.Debug("query_time",
+	r.logger.Debug("db:query_time",
 		"query", "PutShortUrl",
 		"time_ms", elapsed/time.Millisecond,
 	)
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// If queryLongUrl is returned, a collision happened
 	// 1. If it's the same as longUrl, then this URL has already been shortened
 	// 2. If it's a different longUrl, then an actual collision occurred
 	if queryLongUrl != longUrl {
-		return "", &ShortUrlCollision{longUrl1: longUrl, longUrl2: queryLongUrl}
+		return &ShortUrlCollision{longUrl1: longUrl, longUrl2: queryLongUrl}
 	}
 
-	return shortUrl, nil
+	return nil
 }
 
 func (r *PgUrlRepo) Close() {

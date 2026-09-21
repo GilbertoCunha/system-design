@@ -39,6 +39,7 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 	// In case there is a collision in ShortUrl creation,
 	// meaning two different longUrls having the same hash,
 	// then simply add a suffix to the longUrl and try again
+	// TODO: Decouple HTTP request timeout from query timeout
 	var shortUrl string
 	ok := false
 	urlToHash := longUrl
@@ -46,7 +47,7 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 	defer cancel()
 	for !ok {
 		shortUrl = GetMD5Hash(urlToHash)
-		_, dberr := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
+		dberr := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
 
 		_, collision := errors.AsType[*ShortUrlCollision](dberr)
 		if dberr != nil && !collision {
@@ -55,6 +56,11 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 			u.logger.Warn("hash collision", "hash", shortUrl, "url", urlToHash)
 			urlToHash += "1" // add suffix to hash again
 		} else {
+			// Write to cache before closing
+			err := u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
+			if err != nil {
+				return "", err
+			}
 			ok = true
 		}
 	}
@@ -74,10 +80,19 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 		return "", &InvalidShortUrl{shortUrl: shortUrl}
 	}
 
-	// Retrieve longUrl
+	// Retrieve longUrl from cache
+	longUrl, err := u.cacheUrlRepo.GetLongUrl(ctx, shortUrl)
+	if err == nil {
+		return longUrl, nil
+	} else if _, ok := errors.AsType[*ShortUrlNotFound](err); !ok {
+		return "", err
+	}
+
+	// Retrieve longUrl from DB
+	// TODO: Decouple HTTP request timeout from query timeout
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
-	longUrl, err := u.dbUrlRepo.GetLongUrl(ctx, shortUrl)
+	longUrl, err = u.dbUrlRepo.GetLongUrl(ctx, shortUrl)
 	if err != nil {
 		return "", err
 	}

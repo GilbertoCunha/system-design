@@ -30,12 +30,6 @@ Known gaps and deferred work. Roughly ordered by impact.
       Do NOT touch path case, trailing slashes on non-empty paths, query order,
       `www.`, or tracking params — those change which resource is fetched.
 
-## Testing
-
-- [ ] **No tests at all** (`test/` holds only `.gitkeep`). The cheapest wins need no
-      database: `GetMD5Hash`, the short-URL regexp, URL validation, normalization,
-      and the duplicate-vs-collision decision in `PgUrlRepo.PutShortUrl`.
-
 ## Nits
 
 - [ ] Hardcoded 500ms query timeouts in `service.go` could live in `AppConfig`
