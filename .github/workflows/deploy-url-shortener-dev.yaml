@@ -1,0 +1,42 @@
+---
+name: deploy-url-shortener-dev
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - url-shortener/**
+
+# Serialize pushes to the gitops/dev branch across runs.
+concurrency:
+  group: gitops-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push to the gitops/dev branch
+  packages: write # push to ghcr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build image
+        id: build
+        uses: ./.github/actions/build-image
+        with:
+          project: url-shortener
+          context: url-shortener
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push manifests to gitops/dev
+        uses: ./.github/actions/push-gitops
+        with:
+          gitops-dir: url-shortener/gitops
+          overlay: dev
+          image: ${{ steps.build.outputs.image }}
+          branch: gitops/dev
+          target-path: url-shortener

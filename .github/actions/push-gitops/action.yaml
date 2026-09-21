@@ -1,0 +1,87 @@
+---
+name: Push GitOps manifests
+description: >-
+  Copy a project's kustomize base and one overlay, substitute the image
+  placeholder, and commit the result to a GitOps branch. The source branch
+  is never modified. Requires the repository to be checked out with
+  credentials that can push (contents:write).
+
+inputs:
+  gitops-dir:
+    description: Directory containing base/ and overlays/, relative to the repository root.
+    required: true
+  overlay:
+    description: Overlay to publish (e.g. dev).
+    required: true
+  image:
+    description: Image reference that replaces the placeholder.
+    required: true
+  branch:
+    description: Branch to push the rendered manifests to.
+    required: true
+  target-path:
+    description: >-
+      Directory on the GitOps branch to write into (e.g. the project name).
+      Only this directory is replaced, so each project sharing a branch must
+      use its own.
+    required: true
+  placeholder:
+    description: String in the manifests to replace with the image reference.
+    default: <replace-me>
+
+runs:
+  using: composite
+  steps:
+    - name: Render manifests
+      shell: bash
+      env:
+        GITOPS_DIR: ${{ inputs.gitops-dir }}
+        OVERLAY: ${{ inputs.overlay }}
+        IMAGE: ${{ inputs.image }}
+        PLACEHOLDER: ${{ inputs.placeholder }}
+      run: |
+        out="${RUNNER_TEMP}/gitops-rendered"
+        rm -rf "${out}"
+        mkdir -p "${out}/overlays"
+        cp -r "${GITOPS_DIR}/base" "${out}/base"
+        cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
+        grep -rlF "${PLACEHOLDER}" "${out}" | xargs -r sed -i "s|${PLACEHOLDER}|${IMAGE}|g"
+        if grep -rqF "${PLACEHOLDER}" "${out}"; then
+          echo "::error::${PLACEHOLDER} placeholder still present after substitution"
+          exit 1
+        fi
+
+    - name: Push manifests
+      shell: bash
+      env:
+        BRANCH: ${{ inputs.branch }}
+        TARGET_PATH: ${{ inputs.target-path }}
+        IMAGE: ${{ inputs.image }}
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        worktree="${RUNNER_TEMP}/gitops-worktree"
+        rm -rf "${worktree}"
+        if git fetch --depth=1 origin "${BRANCH}"; then
+          git worktree add -B "${BRANCH}" "${worktree}" FETCH_HEAD
+        else
+          # First run: start the branch with no history shared with the source branch.
+          git worktree add --detach "${worktree}"
+          git -C "${worktree}" checkout --orphan "${BRANCH}"
+          git -C "${worktree}" rm -rqf --ignore-unmatch .
+        fi
+
+        # Replace the target directory entirely so deleted manifests don't linger.
+        git -C "${worktree}" rm -rqf --ignore-unmatch -- "${TARGET_PATH}"
+        mkdir -p "${worktree}/${TARGET_PATH}"
+        cp -r "${RUNNER_TEMP}/gitops-rendered/." "${worktree}/${TARGET_PATH}/"
+        git -C "${worktree}" add -A
+
+        if git -C "${worktree}" diff --cached --quiet; then
+          echo "No manifest changes to push"
+        else
+          git -C "${worktree}" commit -m "deploy: ${IMAGE}" -m "Source commit: ${GITHUB_SHA}"
+          git -C "${worktree}" push origin "HEAD:refs/heads/${BRANCH}"
+        fi
+        git worktree remove --force "${worktree}"

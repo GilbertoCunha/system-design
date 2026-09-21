@@ -1,0 +1,53 @@
+---
+name: Build image
+description: >-
+  Build a project's Docker image and push it to GHCR as
+  ghcr.io/<owner>/<repo>:<project>-<git-sha>.
+
+inputs:
+  project:
+    description: Project name, used as the image tag prefix.
+    required: true
+  context:
+    description: Docker build context, relative to the repository root.
+    required: true
+  token:
+    description: Token with packages:write permission.
+    required: true
+
+outputs:
+  image:
+    description: Full image reference that was pushed.
+    value: ${{ steps.image.outputs.ref }}
+
+runs:
+  using: composite
+  steps:
+    # GHCR requires lowercase repository names, but the owner may contain uppercase.
+    - name: Compute image reference
+      id: image
+      shell: bash
+      env:
+        PROJECT: ${{ inputs.project }}
+      run: |
+        repository="${GITHUB_REPOSITORY,,}"
+        echo "ref=ghcr.io/${repository}:${PROJECT}-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.token }}
+
+    - name: Build and push image
+      uses: docker/build-push-action@v7
+      with:
+        context: ${{ inputs.context }}
+        push: true
+        tags: ${{ steps.image.outputs.ref }}
+        cache-from: type=gha,scope=${{ inputs.project }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.project }}
