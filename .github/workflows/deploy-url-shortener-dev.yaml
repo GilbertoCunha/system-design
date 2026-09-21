@@ -6,6 +6,8 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/**
+      - .github/workflows/deploy-url-shortener-dev.yaml
       - url-shortener/**
 
 # Serialize pushes to the gitops/dev branch across runs.
