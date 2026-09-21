@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-backend
+  labels:
+    app: url-shortener
+    role: backend
+spec:
+  replicas: 2
+  # Spread pods across nodes
+  topologySpreadConstraints:
+    - topologyKey: kubernetes.io/hostname
+      maxSkew: 1
+      whenUnsatisfiable: DoNotSchedule
+  selector:
+    matchLabels:
+      app: url-shortener
+      role: backend
+  template:
+    metadata:
+      labels:
+        app: url-shortener
+        role: backend
+    spec:
+      containers:
+        - name: api
+          image: url-shortener-backend
+          # Prevent privilege escalation
+          securityContext:
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+          # Define expected resources for the pods
+          resources:
+            requests:
+              cpu: 200m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 200Mi
+          # Define readiness and liveness conditions
+          # using probes
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            httpGet:
+              path: /healthz
+              port: 8080
+          livenessProbe:
+            periodSeconds: 10
+            httpGet:
+              path: /healthz
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-backend
+  labels:
+    app: url-shortener
+    role: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: url-shortener
+    role: backend
+  ports:
+    - name: 8080-8080
+      port: 8080
+      protocol: TCP
+      targetPort: 8080

@@ -1,0 +1,13 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: url-shortener
+          command:
+            - --environment
+            - dev
