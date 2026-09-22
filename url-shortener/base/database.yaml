@@ -25,3 +25,78 @@ spec:
 
   monitoring:
     enablePodMonitor: true
+---
+# Direct access to PostgreSQL for a human with a SQL client. The mesh Gateway
+# cannot carry this: a Gateway listener is bound to one port and raw TCP has no
+# Host header or SNI to dispatch on, so an HTTPRoute would hand the Postgres
+# startup packet to an HTTP parser. A LoadBalancer Service instead takes its own
+# address from the Cilium pool, and the port stays 5432.
+#
+# CNPG owns url-shortener-db-rw and reconciles it, so this is a Service of our
+# own rather than an annotation on that one. The selector follows the primary
+# role, which CNPG moves during failover, so the address follows the primary.
+#
+# The DNS name is per-environment and lives in the overlay.
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-db-lb
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  type: LoadBalancer
+
+  # Cilium announces the address over L2 and routes it in eBPF; the extra
+  # per-node port that a LoadBalancer Service gets by default is never used.
+  allocateLoadBalancerNodePorts: false
+
+  # Preserves the client address, which the NetworkPolicy below matches on.
+  # Under the default `Cluster` the connection would be SNATed to a node
+  # address and every client would look alike. The mesh Gateways are set the
+  # same way.
+  externalTrafficPolicy: Local
+
+  selector:
+    cnpg.io/cluster: url-shortener-db
+    cnpg.io/instanceRole: primary
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+---
+# The namespace denies by default, so the Service above would accept the
+# connection and then the packet would be dropped on the way to the pod -- a
+# hang, with nothing logged. This is the project-level rule the platform chart
+# leaves to us.
+#
+# Scoped to the two ranges that can reach the pool: the LAN the nodes sit on,
+# and the Tailscale CGNAT range the subnet router hands out. Anything else
+# reaching the address is refused here rather than at the database's own auth.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-clients
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: url-shortener-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.10.10.0/24
+        - ipBlock:
+            cidr: 100.64.0.0/10
+      ports:
+        - protocol: TCP
+          port: 5432

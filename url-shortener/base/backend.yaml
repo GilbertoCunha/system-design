@@ -31,7 +31,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-dcb9047e1dae98b03376adfc4ab8a58f3b720313
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-156255a23369e87d262ccc55d18338dd17068dc2
           # Prevent privilege escalation
           securityContext:
             allowPrivilegeEscalation: false
