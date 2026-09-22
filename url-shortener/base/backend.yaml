@@ -23,13 +23,21 @@ spec:
         app: url-shortener
         role: backend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           image: url-shortener-backend
           # Prevent privilege escalation
           securityContext:
-            runAsUser: 65534
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: POSTGRES_URI
               valueFrom:
