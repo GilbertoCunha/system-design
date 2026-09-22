@@ -4,8 +4,10 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - database.yaml
+
+patches:
+  # Adds the per-environment DNS name to the database's LoadBalancer Service.
+  - path: database.yaml
 
 # TODO: Deploy patch too
-# patches:
 #   - path: backend.yaml
