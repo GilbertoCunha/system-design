@@ -9,5 +9,6 @@ spec:
       containers:
         - name: url-shortener
           command:
+            - /bin/url_shortener
             - --environment
             - dev

@@ -1,0 +1,44 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: url-shortener-db-migrations
+  annotations:
+    # Job should be created after database
+    # and re-created in every sync since job
+    # specs are immutable
+    # A job only reports as healthy after it succeeds
+    # so the next wave (backend deployment)
+    # only happens after the migrations are in place
+    argocd.argoproj.io/sync-options: "Replace=true,Force=true"
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      app: url-shortener
+      role: migrations
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: goose
+          image: url-shortener-backend
+          command:
+            - /bin/goose
+            - -dir
+            - /migrations
+            - postgres
+            - up
+          env:
+            - name: GOOSE_DBSTRING
+              valueFrom:
+                secretKeyRef:
+                  name: url-shortener-db-app
+                  key: uri
+          resources:
+            requests:
+              cpu: 200m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 200Mi
