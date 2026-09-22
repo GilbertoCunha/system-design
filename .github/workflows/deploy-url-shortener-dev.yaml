@@ -47,19 +47,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # Matrix jobs can't expose one output per leg, so rebuild the references
-      # the same way the build-image action does.
-      - name: Compute image registry
-        id: registry
-        shell: bash
-        run: echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
       - name: Push manifests to gitops/dev
         uses: ./.github/actions/push-gitops
         with:
           gitops-dir: url-shortener/gitops
           overlay: dev
-          images: |
-            url-shortener-backend=${{ steps.registry.outputs.repository }}:url-shortener-backend-${{ github.sha }}
+          # The manifests carry the registry and repository; only the tag and
+          # the migration Job's name suffix vary, and both are the commit SHA,
+          # so one substitution keeps them consistent by construction.
+          replacements: git-sha-placeholder=${{ github.sha }}
           branch: gitops/dev
           target-path: url-shortener

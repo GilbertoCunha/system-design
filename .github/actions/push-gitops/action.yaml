@@ -1,8 +1,8 @@
 ---
 name: Push GitOps manifests
 description: >-
-  Copy a project's kustomize base and one overlay, set the overlay's images
-  with `kustomize edit set image`, and commit the result to a GitOps branch.
+  Copy a project's kustomize base and one overlay, substitute placeholder
+  tokens in the manifests, and commit the result to a GitOps branch.
   The source branch is never modified. Requires the repository to be checked out with
   credentials that can push (contents:write).
 
@@ -13,11 +13,11 @@ inputs:
   overlay:
     description: Overlay to publish (e.g. dev).
     required: true
-  images:
+  replacements:
     description: >-
-      Images to set, one `<name>=<image reference>` per line, where <name> is
-      the image name used in the manifests (see kustomize `images`).
-      Leave empty to publish the manifests unchanged.
+      Placeholder substitutions, one `<placeholder>=<value>` per line. Every
+      placeholder must appear in at least one manifest, and none may survive
+      into the rendered output. Leave empty to publish the manifests unchanged.
     default: ""
   branch:
     description: Branch to push the rendered manifests to.
@@ -37,7 +37,7 @@ runs:
       env:
         GITOPS_DIR: ${{ inputs.gitops-dir }}
         OVERLAY: ${{ inputs.overlay }}
-        IMAGES: ${{ inputs.images }}
+        REPLACEMENTS: ${{ inputs.replacements }}
       run: |
         out="${RUNNER_TEMP}/gitops-rendered"
         rm -rf "${out}"
@@ -45,30 +45,46 @@ runs:
         cp -r "${GITOPS_DIR}/base" "${out}/base"
         cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
 
-        cd "${out}/overlays/${OVERLAY}"
-        # Unquoted on purpose: each line of IMAGES becomes its own loop item.
-        for image in ${IMAGES}; do
-          kustomize edit set image "${image}"
-        done
+        while IFS= read -r line; do
+          [ -n "${line}" ] || continue
 
-        # kustomize silently skips names that match no container, so make sure
-        # every new image actually shows up in the final manifests.
-        manifests="$(kustomize build .)"
-        for image in ${IMAGES}; do
-          name="${image%%=*}"
-          ref="${image#*=}"
-          if ! grep -qF "${ref}" <<< "${manifests}"; then
-            echo "::error::No container uses image name ${name} in overlay ${OVERLAY}"
+          placeholder="${line%%=*}"
+          value="${line#*=}"
+          if [ "${placeholder}" = "${line}" ] || [ -z "${placeholder}" ]; then
+            echo "::error::Replacement '${line}' is not in <placeholder>=<value> form"
             exit 1
           fi
-        done
+
+          # A placeholder that matches nothing means a typo or a renamed token;
+          # publishing unsubstituted manifests would only surface as a pull error.
+          if ! grep -rqF -- "${placeholder}" "${out}"; then
+            echo "::error::Placeholder ${placeholder} appears in no manifest"
+            exit 1
+          fi
+
+          # `|` as the delimiter: image references contain `/`.
+          find "${out}" -type f -name '*.yaml' \
+            -exec sed -i "s|${placeholder}|${value}|g" {} +
+        done <<< "${REPLACEMENTS}"
+
+        # Catch anything the substitution missed, including placeholders that
+        # only ever existed in a manifest the overlay does not include.
+        manifests="$(kustomize build "${out}/overlays/${OVERLAY}")"
+        while IFS= read -r line; do
+          [ -n "${line}" ] || continue
+          placeholder="${line%%=*}"
+          if grep -qF -- "${placeholder}" <<< "${manifests}"; then
+            echo "::error::Placeholder ${placeholder} survived into the rendered manifests"
+            exit 1
+          fi
+        done <<< "${REPLACEMENTS}"
 
     - name: Push manifests
       shell: bash
       env:
         BRANCH: ${{ inputs.branch }}
         TARGET_PATH: ${{ inputs.target-path }}
-        IMAGES: ${{ inputs.images }}
+        REPLACEMENTS: ${{ inputs.replacements }}
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -94,7 +110,7 @@ runs:
           echo "No manifest changes to push"
         else
           git -C "${worktree}" commit -m "deploy: ${TARGET_PATH}@${GITHUB_SHA::7}" \
-            -m "${IMAGES}" -m "Source commit: ${GITHUB_SHA}"
+            -m "${REPLACEMENTS}" -m "Source commit: ${GITHUB_SHA}"
           git -C "${worktree}" push origin "HEAD:refs/heads/${BRANCH}"
         fi
         git worktree remove --force "${worktree}"
