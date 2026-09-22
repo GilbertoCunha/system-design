@@ -1,10 +1,9 @@
----
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base
-
-# TODO: Deploy patch too
-# patches:
-#   - path: backend.yaml
+- ../../base
+images:
+- name: url-shortener-backend
+  newName: ghcr.io/gilbertocunha/system-design
+  newTag: url-shortener-backend-a3cd906091b7ccaa3b8cd768aea3037d357b12f0
