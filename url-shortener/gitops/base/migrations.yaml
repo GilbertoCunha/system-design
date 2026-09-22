@@ -16,8 +16,9 @@ spec:
   backoffLimit: 2
   template:
     metadata:
-      app: url-shortener
-      role: migrations
+      labels:
+        app: url-shortener
+        role: migrations
     spec:
       restartPolicy: Never
       containers:
