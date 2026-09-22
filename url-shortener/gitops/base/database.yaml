@@ -53,11 +53,13 @@ spec:
   # per-node port that a LoadBalancer Service gets by default is never used.
   allocateLoadBalancerNodePorts: false
 
-  # Preserves the client address, which the NetworkPolicy below matches on.
-  # Under the default `Cluster` the connection would be SNATed to a node
-  # address and every client would look alike. The mesh Gateways are set the
-  # same way.
-  externalTrafficPolicy: Local
+  # `Local` would preserve the client address, but it only forwards to a
+  # backend on the node that received the packet, and Cilium picks the node
+  # that announces the address without regard to where the backends are. With
+  # one database instance the announcing node usually has no local backend, and
+  # then it answers with a reset. `Cluster` lets any node forward, at the cost
+  # of SNATing the client to a node address -- see the NetworkPolicy below.
+  externalTrafficPolicy: Cluster
 
   selector:
     cnpg.io/cluster: url-shortener-db
@@ -72,10 +74,6 @@ spec:
 # connection and then the packet would be dropped on the way to the pod -- a
 # hang, with nothing logged. This is the project-level rule the platform chart
 # leaves to us.
-#
-# Scoped to the two ranges that can reach the pool: the LAN the nodes sit on,
-# and the Tailscale CGNAT range the subnet router hands out. Anything else
-# reaching the address is refused here rather than at the database's own auth.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -93,10 +91,9 @@ spec:
     - Ingress
   ingress:
     - from:
+        # The node range. Tailscale and LAN clients both land here after SNAT.
         - ipBlock:
             cidr: 10.10.10.0/24
-        - ipBlock:
-            cidr: 100.64.0.0/10
       ports:
         - protocol: TCP
           port: 5432
