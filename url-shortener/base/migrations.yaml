@@ -24,6 +24,10 @@ spec:
       containers:
         - name: goose
           image: url-shortener-backend
+          # Prevent privilege escalation
+          securityContext:
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
           command:
             - /bin/goose
             - -dir

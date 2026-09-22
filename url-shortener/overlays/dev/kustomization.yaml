@@ -6,4 +6,4 @@ resources:
 images:
 - name: url-shortener-backend
   newName: ghcr.io/gilbertocunha/system-design
-  newTag: url-shortener-backend-a3cd906091b7ccaa3b8cd768aea3037d357b12f0
+  newTag: url-shortener-backend-47d936e2e44d29c3fbc9444ce1ebac2fca47a94d
