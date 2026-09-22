@@ -74,8 +74,21 @@ spec:
 # connection and then the packet would be dropped on the way to the pod -- a
 # hang, with nothing logged. This is the project-level rule the platform chart
 # leaves to us.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+#
+# A CiliumNetworkPolicy rather than a NetworkPolicy, because a source address
+# is not available to match on. Under `externalTrafficPolicy: Cluster` Cilium
+# SNATs an arriving connection to the cilium_host address of whichever node
+# took it, so every external client appears as one of the node router addresses
+# inside the pod CIDR -- never as itself, and never as anything in the node
+# range either. An ipBlock precise enough to be worth writing cannot be
+# written. Cilium does classify that traffic as `world`, which is the thing we
+# actually mean: reached us from outside the cluster.
+#
+# So this rule scopes the port, not the client. Who may open a connection is
+# settled by the Service being mesh-only and by PostgreSQL's own
+# authentication.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: allow-db-clients
   labels:
@@ -84,16 +97,13 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       cnpg.io/cluster: url-shortener-db
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        # The node range. Tailscale and LAN clients both land here after SNAT.
-        - ipBlock:
-            cidr: 10.10.10.0/24
-      ports:
-        - protocol: TCP
-          port: 5432
+    - fromEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
