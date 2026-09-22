@@ -4,6 +4,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - database.yaml
 
 # TODO: Deploy patch too
 # patches:
