@@ -6,6 +6,9 @@ metadata:
   labels:
     app: url-shortener
     role: db
+  annotations:
+    # Database is the first resource to be created
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   instances: 1
 

@@ -17,11 +17,7 @@ type AppConfig struct {
 	} `mapstructure:"app"`
 
 	Postgres struct {
-		DbName   string `mapstructure:"db_name"`
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
+		Uri string `mapstructure:"uri"`
 
 		Pool struct {
 			MinConns int `mapstructure:"min_conns"`
@@ -63,10 +59,7 @@ func NewAppConfig(environment Environment) (*AppConfig, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
-	if err := viper.BindEnv("postgres.user", "POSTGRES_USER"); err != nil {
-		return nil, err
-	}
-	if err := viper.BindEnv("postgres.password", "POSTGRES_PASSWORD"); err != nil {
+	if err := viper.BindEnv("postgres.uri", "POSTGRES_URI"); err != nil {
 		return nil, err
 	}
 	if err := viper.BindEnv("redis.user", "REDIS_USER"); err != nil {

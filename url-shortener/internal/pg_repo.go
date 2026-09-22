@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -18,16 +17,7 @@ type PgUrlRepo struct {
 }
 
 func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUrlRepo, error) {
-	dsn := fmt.Sprintf(
-		"postgres://%v:%v@%v:%v/%v",
-		c.Postgres.User,
-		c.Postgres.Password,
-		c.Postgres.Host,
-		c.Postgres.Port,
-		c.Postgres.DbName,
-	)
-
-	config, err := pgxpool.ParseConfig(dsn)
+	config, err := pgxpool.ParseConfig(c.Postgres.Uri)
 	if err != nil {
 		return nil, err
 	}

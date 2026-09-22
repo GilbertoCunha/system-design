@@ -1,0 +1,17 @@
+---
+app:
+  log_level: debug
+  port: 8080
+  read_header_timeout_seconds: 2
+  read_timeout_seconds: 5
+  write_timeout_seconds: 5
+  idle_timeout_seconds: 30
+
+postgres:
+  pool:
+    min_conns: 10
+    max_conns: 50
+
+redis:
+  host: cache
+  port: 6379

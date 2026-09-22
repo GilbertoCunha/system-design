@@ -30,6 +30,12 @@ spec:
           securityContext:
             runAsUser: 65534
             allowPrivilegeEscalation: false
+          env:
+            - name: POSTGRES_URI
+              valueFrom:
+                secretKeyRef:
+                  name: url-shortener-db-app
+                  key: uri
           # Define expected resources for the pods
           resources:
             requests:

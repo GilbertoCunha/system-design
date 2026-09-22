@@ -8,9 +8,6 @@ app:
   idle_timeout_seconds: 30
 
 postgres:
-  host: database
-  port: 5432
-  db_name: url_shortener
   pool:
     min_conns: 10
     max_conns: 50

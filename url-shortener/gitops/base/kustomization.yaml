@@ -7,3 +7,4 @@ resources:
   # - backend.yaml
   # - cache.yaml
   - database.yaml
+  - migrations.yaml

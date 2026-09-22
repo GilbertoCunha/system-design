@@ -3,13 +3,13 @@ services:
   api:
     build: .
     command:
+      - /bin/url_shortener
       - --environment
       - local
     ports:
       - "8080:8080"
     environment:
-      POSTGRES_USER: url_shortener
-      POSTGRES_PASSWORD: 1234567890
+      POSTGRES_URI: postgresql://url_shortener:1234567890@database:5432/url_shortener
       REDIS_USER: default
       REDIS_PASSWORD: 1234567890
     depends_on:
@@ -47,13 +47,15 @@ services:
       - "5432:5432"
 
   migrations:
-    image: ghcr.io/kukymbr/goose-docker:3.28.0
+    build: .
+    command:
+      - /bin/goose
+      - -dir
+      - /migrations
+      - postgres
+      - up
     environment:
-      GOOSE_DRIVER: postgres
-      GOOSE_COMMAND: up
       GOOSE_DBSTRING: postgresql://url_shortener:1234567890@database:5432/url_shortener
-    volumes:
-      - ./internal/database/migrations:/migrations
     depends_on:
       database:
         condition: service_healthy
