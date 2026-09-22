@@ -5,7 +5,7 @@ metadata:
   # The name carries the image SHA, so every deploy creates a *new* Job instead
   # of mutating an existing one. Job specs are immutable, and Argo's server-side
   # diff validates changes with a dry-run apply, so an in-place edit fails at
-  # comparison time and wedges the whole Application. A fresh name diffs cleanly;
+  # comparison time and wedges the whole Application. A fresh name diffs cleanly
   # the previous run is pruned.
   name: migrations-git-sha-placeholder
   annotations:
