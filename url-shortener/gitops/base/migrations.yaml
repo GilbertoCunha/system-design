@@ -7,7 +7,7 @@ metadata:
   # diff validates changes with a dry-run apply, so an in-place edit fails at
   # comparison time and wedges the whole Application. A fresh name diffs cleanly;
   # the previous run is pruned.
-  name: url-shortener-db-migrations-git-sha-placeholder
+  name: migrations-git-sha-placeholder
   annotations:
     # Between the database (-2) and the backend (0). A Job only reports healthy
     # once it succeeds, and Argo waits for a wave to be healthy before applying
