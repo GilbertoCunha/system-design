@@ -57,6 +57,9 @@ spec:
   parentRefs:
     - name: gw-internal-dev
       namespace: gateway-system
+      sectionName: https
+    - name: gw-internal-dev
+      namespace: gateway-system
       sectionName: http
   hostnames:
     - url-shortener.dev.k8s.homelab.grncunha.com
