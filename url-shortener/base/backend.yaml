@@ -28,44 +28,6 @@ spec:
         runAsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
-      containers:
-        - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-7461ffdc4453099fbae1513eb29e160c3fe95356
-          # Prevent privilege escalation
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
-          env:
-            - name: REDIS_URI
-              value: redis://url-shortener-cache:6379
-            - name: POSTGRES_URI
-              valueFrom:
-                secretKeyRef:
-                  name: url-shortener-db-app
-                  key: uri
-          # Define expected resources for the pods
-          resources:
-            requests:
-              cpu: 200m
-              memory: 100Mi
-            limits:
-              cpu: 500m
-              memory: 200Mi
-          # Define readiness and liveness conditions
-          # using probes
-          readinessProbe:
-            initialDelaySeconds: 2
-            periodSeconds: 5
-            httpGet:
-              path: /healthz
-              port: 8080
-          livenessProbe:
-            periodSeconds: 10
-            httpGet:
-              path: /healthz
-              port: 8080
 ---
 apiVersion: v1
 kind: Service
