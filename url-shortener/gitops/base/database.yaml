@@ -17,7 +17,7 @@ spec:
     annotations:
       # Monitoring
       prometheus.io/scrape: "true"
-      prometheus.io/port: 9187
+      prometheus.io/port: "9187"
       prometheus.io/path: /metrics
 
   instances: 1
