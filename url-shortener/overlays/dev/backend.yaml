@@ -7,11 +7,47 @@ spec:
   template:
     spec:
       containers:
-        - name: url-shortener
+        - name: api
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-b2584e372d195e649da92db621215a12d6bce4f9
           command:
             - /bin/url_shortener
             - --environment
             - dev
+          # Prevent privilege escalation
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: REDIS_URI
+              value: redis://url-shortener-cache:6379
+            - name: POSTGRES_URI
+              valueFrom:
+                secretKeyRef:
+                  name: url-shortener-db-app
+                  key: uri
+          # Define expected resources for the pods
+          resources:
+            requests:
+              cpu: 200m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 200Mi
+          # Define readiness and liveness conditions
+          # using probes
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            httpGet:
+              path: /healthz
+              port: 8080
+          livenessProbe:
+            periodSeconds: 10
+            httpGet:
+              path: /healthz
+              port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
