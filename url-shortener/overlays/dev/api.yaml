@@ -2,13 +2,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: url-shortener-backend
+  name: url-shortener-api
 spec:
   template:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-b2584e372d195e649da92db621215a12d6bce4f9
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-895d19531a9e7f99cbd40eda3d9e8d58f2a40869
           command:
             - /bin/url_shortener
             - --environment

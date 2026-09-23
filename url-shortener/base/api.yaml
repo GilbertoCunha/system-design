@@ -2,21 +2,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: url-shortener-backend
+  name: url-shortener-api
   labels:
     app: url-shortener
-    role: backend
+    role: api
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: url-shortener
-      role: backend
+      role: api
   template:
     metadata:
       labels:
         app: url-shortener
-        role: backend
+        role: api
     spec:
       topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname
@@ -32,15 +32,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: url-shortener-backend
+  name: url-shortener-api
   labels:
     app: url-shortener
-    role: backend
+    role: api
 spec:
   type: ClusterIP
   selector:
     app: url-shortener
-    role: backend
+    role: api
   ports:
     - name: 8080-8080
       port: 8080
@@ -62,5 +62,5 @@ spec:
     - url-shortener.dev.k8s.homelab.grncunha.com
   rules:
     - backendRefs:
-        - name: url-shortener-backend
+        - name: url-shortener-api
           port: 8080
