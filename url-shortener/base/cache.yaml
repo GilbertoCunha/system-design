@@ -1,0 +1,117 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-cache
+  labels:
+    app: url-shortener
+    role: cache
+  annotations:
+    argocd.argoproj.sync-wave: "-2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: url-shortener
+      role: cache
+  template:
+    metadata:
+      labels:
+        app: url-shortener
+        role: cache
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: data
+          emptyDir: {}
+      containers:
+        - name: redis
+          image: redis:8.10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500m
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-cache
+  labels:
+    app: url-shortener
+    role: cache
+  annotations:
+    argocd.argoproj.sync-wave: "-2"
+spec:
+  type: ClusterIP
+  selector:
+    app: url-shortener
+    role: cache
+  ports:
+    - name: redis
+      port: 6379
+      protocol: TCP
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-cache-lb
+  labels:
+    app: url-shortener
+    role: cache
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  externalTrafficPolicy: Cluster
+
+  selector:
+    app: url-shortener
+    role: cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cache-clients
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: url-shortener
+      role: cache
+  ingress:
+    - fromEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP

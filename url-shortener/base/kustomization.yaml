@@ -3,8 +3,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  # TODO: Deploy all resources
-  # - backend.yaml
-  # - cache.yaml
+  - backend.yaml
+  - cache.yaml
   - database.yaml
   - migrations.yaml
