@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-895d19531a9e7f99cbd40eda3d9e8d58f2a40869
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-f50ef0298c914a1f7bede79dcf35e2c3b6fae459
           command:
             - /bin/url_shortener
             - --environment
@@ -55,6 +55,9 @@ metadata:
   name: url-shortener
 spec:
   parentRefs:
+    - name: gw-internal-dev
+      namespace: gateway-system
+      sectionName: https
     - name: gw-internal-dev
       namespace: gateway-system
       sectionName: http
