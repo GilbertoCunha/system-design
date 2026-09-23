@@ -1,0 +1,90 @@
+---
+name: Render GitOps manifests
+description: >-
+  Copy a project's kustomize base and one overlay, substitute placeholder
+  tokens in the manifests, and upload the result as a workflow artifact for
+  push-gitops to publish. The artifact holds a single top-level directory,
+  `target-path`, which is where the manifests land on the GitOps branch.
+
+inputs:
+  gitops-dir:
+    description: Directory containing base/ and overlays/, relative to the repository root.
+    required: true
+  overlay:
+    description: Overlay to render (e.g. dev).
+    required: true
+  replacements:
+    description: >-
+      Placeholder substitutions, one `<placeholder>=<value>` per line. Every
+      placeholder must appear in at least one manifest, and none may survive
+      into the rendered output. Leave empty to render the manifests unchanged.
+    default: ""
+  target-path:
+    description: >-
+      Directory on the GitOps branch to write into (e.g. the project name).
+      push-gitops replaces only this directory, so each project sharing a
+      branch must use its own.
+    required: true
+  artifact-name:
+    description: Name of the uploaded artifact. push-gitops downloads by pattern, so keep a shared prefix per branch.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Render manifests
+      shell: bash
+      env:
+        GITOPS_DIR: ${{ inputs.gitops-dir }}
+        OVERLAY: ${{ inputs.overlay }}
+        REPLACEMENTS: ${{ inputs.replacements }}
+        TARGET_PATH: ${{ inputs.target-path }}
+      run: |
+        out="${RUNNER_TEMP}/gitops-rendered/${TARGET_PATH}"
+        rm -rf "${RUNNER_TEMP}/gitops-rendered"
+        mkdir -p "${out}/overlays"
+        cp -r "${GITOPS_DIR}/base" "${out}/base"
+        cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
+
+        while IFS= read -r line; do
+          [ -n "${line}" ] || continue
+
+          placeholder="${line%%=*}"
+          value="${line#*=}"
+          if [ "${placeholder}" = "${line}" ] || [ -z "${placeholder}" ]; then
+            echo "::error::Replacement '${line}' is not in <placeholder>=<value> form"
+            exit 1
+          fi
+
+          # A placeholder that matches nothing means a typo or a renamed token;
+          # publishing unsubstituted manifests would only surface as a pull error.
+          if ! grep -rqF -- "${placeholder}" "${out}"; then
+            echo "::error::Placeholder ${placeholder} appears in no manifest"
+            exit 1
+          fi
+
+          # `|` as the delimiter: image references contain `/`.
+          find "${out}" -type f -name '*.yaml' \
+            -exec sed -i "s|${placeholder}|${value}|g" {} +
+        done <<< "${REPLACEMENTS}"
+
+        # Catch anything the substitution missed: a placeholder that only
+        # existed in a manifest the overlay does not include, or one nobody
+        # passed a replacement for. Placeholders are named `*-placeholder`.
+        manifests="$(kustomize build "${out}/overlays/${OVERLAY}")"
+        survivors="$(grep -oE '[A-Za-z0-9_-]+-placeholder' <<< "${manifests}" | sort -u || true)"
+        if [ -n "${survivors}" ]; then
+          echo "::error::Placeholders survived into the rendered manifests: $(tr '\n' ' ' <<< "${survivors}")"
+          exit 1
+        fi
+
+    # Uploading the parent directory keeps `target-path` as the artifact's
+    # top-level directory, so artifacts from several projects can be merged
+    # into one tree without colliding.
+    - name: Upload rendered manifests
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/gitops-rendered/
+        if-no-files-found: error
+        retention-days: 7

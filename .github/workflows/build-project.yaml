@@ -1,0 +1,143 @@
+---
+name: build-project
+
+# One project's half of a deploy: builds (dev) or promotes (prod) its images,
+# then renders its manifests into a `gitops-<environment>-<project>` artifact.
+# Called once per project by deploy-dev and deploy-prod, whose own `publish`
+# job pushes every project's artifact to gitops/<environment> in one commit.
+# Never triggered on its own.
+#
+# Callers must grant `packages: write` (push to ghcr.io).
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Project folder at the repository root, e.g. url-shortener.
+        type: string
+        required: true
+      environment:
+        description: dev or prod. Selects the overlay rendered.
+        type: string
+        required: true
+      images:
+        description: >-
+          JSON array of images to build, each {"name", "context", "dockerfile"}.
+          `context` defaults to the project folder, `dockerfile` to Dockerfile.
+        type: string
+        required: true
+      version:
+        description: Release version (vX.Y.Z). Required for prod, ignored for dev.
+        type: string
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.images) }}
+    env:
+      NAME: ${{ matrix.name }}
+      PROJECT: ${{ inputs.project }}
+      ENVIRONMENT: ${{ inputs.environment }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          case "${ENVIRONMENT}" in
+            dev | prod) ;;
+            *) echo "::error::environment must be dev or prod, got '${ENVIRONMENT}'"; exit 1 ;;
+          esac
+          if [ ! -d "${PROJECT}/gitops/overlays/${ENVIRONMENT}" ]; then
+            echo "::error::${PROJECT}/gitops/overlays/${ENVIRONMENT} does not exist"
+            exit 1
+          fi
+          if [ "${ENVIRONMENT}" = prod ] && [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::prod needs a vX.Y.Z version, got '${VERSION}'"
+            exit 1
+          fi
+
+      # The same reference build-image pushes to. GHCR requires lowercase
+      # repository names, but the owner may contain uppercase.
+      - name: Compute image references
+        id: image
+        shell: bash
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "sha=${repository}:${NAME}-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "version=${repository}:${NAME}-${VERSION}" >> "$GITHUB_OUTPUT"
+
+      # Prod ships the image dev already ran for this commit rather than a
+      # rebuild of it. deploy-dev builds every commit on main, so it is almost
+      # always there; building here only covers a release published before
+      # that commit's dev run finished.
+      - name: Log in to GHCR
+        if: inputs.environment == 'prod'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for an existing image
+        id: existing
+        if: inputs.environment == 'prod'
+        shell: bash
+        env:
+          REF: ${{ steps.image.outputs.sha }}
+        run: |
+          if docker buildx imagetools inspect "${REF}" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::${REF} not found, building it"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build image
+        if: inputs.environment == 'dev' || steps.existing.outputs.found != 'true'
+        uses: ./.github/actions/build-image
+        with:
+          name: ${{ matrix.name }}
+          context: ${{ matrix.context || inputs.project }}
+          dockerfile: ${{ matrix.dockerfile || 'Dockerfile' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A registry-side alias: no layers are pulled or pushed. The manifests
+      # keep the SHA tag, which is immutable; this one is for finding a
+      # release's image by name.
+      - name: Tag image with the release version
+        if: inputs.environment == 'prod'
+        shell: bash
+        env:
+          SOURCE: ${{ steps.image.outputs.sha }}
+          TARGET: ${{ steps.image.outputs.version }}
+        run: docker buildx imagetools create --tag "${TARGET}" "${SOURCE}"
+
+  render:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Render manifests
+        uses: ./.github/actions/render-gitops
+        with:
+          gitops-dir: ${{ inputs.project }}/gitops
+          overlay: ${{ inputs.environment }}
+          # The manifests carry the registry and repository; only the tag and
+          # the migration Job's name suffix vary, and both are the commit SHA,
+          # so one substitution keeps them consistent by construction. The SHA
+          # and repository URL are also annotated onto every manifest, and prod
+          # adds the release version.
+          replacements: |
+            git-sha-placeholder=${{ github.sha }}
+            git-repository-placeholder=${{ github.server_url }}/${{ github.repository }}
+            ${{ inputs.environment == 'prod' && format('release-version-placeholder={0}', inputs.version) || '' }}
+          target-path: ${{ inputs.project }}
+          artifact-name: gitops-${{ inputs.environment }}-${{ inputs.project }}

@@ -1,0 +1,75 @@
+---
+name: deploy-prod
+
+# Publishing a release tagged <project>-vX.Y.Z deploys that project to prod.
+#
+# Adding a project: add a job calling build-project, list it in the `needs`
+# of `publish`, and add its name to `projects` in `release`.
+
+on:
+  release:
+    types:
+      - published
+
+permissions: {}
+
+jobs:
+  release:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      project: ${{ steps.release.outputs.project }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Parse release
+        id: release
+        uses: ./.github/actions/parse-release
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          projects: url-shortener
+
+  url-shortener:
+    needs: release
+    if: needs.release.outputs.project == 'url-shortener'
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+    uses: ./.github/workflows/build-project.yaml
+    with:
+      project: url-shortener
+      environment: prod
+      version: ${{ needs.release.outputs.version }}
+      images: |
+        [
+          {"name": "url-shortener-backend", "context": "url-shortener", "dockerfile": "Dockerfile"}
+        ]
+
+  publish:
+    needs:
+      - release
+      - url-shortener
+    # Other projects' jobs are skipped, which would skip this job too.
+    if: ${{ !cancelled() && needs.release.result == 'success' && !contains(needs.*.result, 'failure') }}
+    concurrency:
+      group: gitops-prod-${{ needs.release.outputs.project }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push to gitops/prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Push manifests to gitops/prod
+        uses: ./.github/actions/push-gitops
+        with:
+          artifact-pattern: gitops-prod-*
+          branch: gitops/prod
+          message: "Release: ${{ github.event.release.tag_name }}"

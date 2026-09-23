@@ -1,0 +1,15 @@
+---
+# The release this overlay was published from. The placeholder is substituted
+# by the deploy-prod workflow with the release's vX.Y.Z.
+#
+# Top-level metadata only, like the git annotations in the base: on pod
+# templates it would restart every Deployment on each release.
+apiVersion: builtin
+kind: AnnotationsTransformer
+metadata:
+  name: release-annotations
+annotations:
+  app.kubernetes.io/version: release-version-placeholder
+fieldSpecs:
+  - path: metadata/annotations
+    create: true

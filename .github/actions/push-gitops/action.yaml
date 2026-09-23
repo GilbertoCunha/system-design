@@ -1,91 +1,48 @@
 ---
 name: Push GitOps manifests
 description: >-
-  Copy a project's kustomize base and one overlay, substitute placeholder
-  tokens in the manifests, and commit the result to a GitOps branch.
-  The source branch is never modified. Requires the repository to be checked out with
-  credentials that can push (contents:write).
+  Download the manifests render-gitops uploaded in this workflow run and
+  commit them to a GitOps branch in a single commit. Each top-level directory
+  in the artifacts replaces the same directory on the branch; directories no
+  artifact carries are left as they are. The source branch is never modified.
+  Requires the repository to be checked out with credentials that can push
+  (contents:write).
 
 inputs:
-  gitops-dir:
-    description: Directory containing base/ and overlays/, relative to the repository root.
+  artifact-pattern:
+    description: Glob matching the render-gitops artifacts to publish (e.g. gitops-dev-*).
     required: true
-  overlay:
-    description: Overlay to publish (e.g. dev).
-    required: true
-  replacements:
-    description: >-
-      Placeholder substitutions, one `<placeholder>=<value>` per line. Every
-      placeholder must appear in at least one manifest, and none may survive
-      into the rendered output. Leave empty to publish the manifests unchanged.
-    default: ""
   branch:
     description: Branch to push the rendered manifests to.
     required: true
-  target-path:
-    description: >-
-      Directory on the GitOps branch to write into (e.g. the project name).
-      Only this directory is replaced, so each project sharing a branch must
-      use its own.
-    required: true
+  message:
+    description: Extra commit message paragraph, e.g. the release being deployed.
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Render manifests
-      shell: bash
-      env:
-        GITOPS_DIR: ${{ inputs.gitops-dir }}
-        OVERLAY: ${{ inputs.overlay }}
-        REPLACEMENTS: ${{ inputs.replacements }}
-      run: |
-        out="${RUNNER_TEMP}/gitops-rendered"
-        rm -rf "${out}"
-        mkdir -p "${out}/overlays"
-        cp -r "${GITOPS_DIR}/base" "${out}/base"
-        cp -r "${GITOPS_DIR}/overlays/${OVERLAY}" "${out}/overlays/${OVERLAY}"
-
-        while IFS= read -r line; do
-          [ -n "${line}" ] || continue
-
-          placeholder="${line%%=*}"
-          value="${line#*=}"
-          if [ "${placeholder}" = "${line}" ] || [ -z "${placeholder}" ]; then
-            echo "::error::Replacement '${line}' is not in <placeholder>=<value> form"
-            exit 1
-          fi
-
-          # A placeholder that matches nothing means a typo or a renamed token;
-          # publishing unsubstituted manifests would only surface as a pull error.
-          if ! grep -rqF -- "${placeholder}" "${out}"; then
-            echo "::error::Placeholder ${placeholder} appears in no manifest"
-            exit 1
-          fi
-
-          # `|` as the delimiter: image references contain `/`.
-          find "${out}" -type f -name '*.yaml' \
-            -exec sed -i "s|${placeholder}|${value}|g" {} +
-        done <<< "${REPLACEMENTS}"
-
-        # Catch anything the substitution missed, including placeholders that
-        # only ever existed in a manifest the overlay does not include.
-        manifests="$(kustomize build "${out}/overlays/${OVERLAY}")"
-        while IFS= read -r line; do
-          [ -n "${line}" ] || continue
-          placeholder="${line%%=*}"
-          if grep -qF -- "${placeholder}" <<< "${manifests}"; then
-            echo "::error::Placeholder ${placeholder} survived into the rendered manifests"
-            exit 1
-          fi
-        done <<< "${REPLACEMENTS}"
+    - name: Download rendered manifests
+      uses: actions/download-artifact@v8
+      with:
+        pattern: ${{ inputs.artifact-pattern }}
+        path: ${{ runner.temp }}/gitops-rendered
+        merge-multiple: true
 
     - name: Push manifests
       shell: bash
       env:
         BRANCH: ${{ inputs.branch }}
-        TARGET_PATH: ${{ inputs.target-path }}
-        REPLACEMENTS: ${{ inputs.replacements }}
+        MESSAGE: ${{ inputs.message }}
       run: |
+        rendered="${RUNNER_TEMP}/gitops-rendered"
+        mapfile -t targets < <(find "${rendered}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort)
+        if [ "${#targets[@]}" -eq 0 ]; then
+          echo "::warning::No rendered manifests to publish"
+          exit 0
+        fi
+        echo "Publishing: ${targets[*]}"
+
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -100,17 +57,40 @@ runs:
           git -C "${worktree}" rm -rqf --ignore-unmatch .
         fi
 
-        # Replace the target directory entirely so deleted manifests don't linger.
-        git -C "${worktree}" rm -rqf --ignore-unmatch -- "${TARGET_PATH}"
-        mkdir -p "${worktree}/${TARGET_PATH}"
-        cp -r "${RUNNER_TEMP}/gitops-rendered/." "${worktree}/${TARGET_PATH}/"
+        # Replace each target directory entirely so deleted manifests don't linger.
+        for target in "${targets[@]}"; do
+          git -C "${worktree}" rm -rqf --ignore-unmatch -- "${target}"
+          mkdir -p "${worktree}/${target}"
+          cp -r "${rendered}/${target}/." "${worktree}/${target}/"
+        done
         git -C "${worktree}" add -A
 
         if git -C "${worktree}" diff --cached --quiet; then
           echo "No manifest changes to push"
         else
-          git -C "${worktree}" commit -m "deploy: ${TARGET_PATH}@${GITHUB_SHA::7}" \
-            -m "${REPLACEMENTS}" -m "Source commit: ${GITHUB_SHA}"
-          git -C "${worktree}" push origin "HEAD:refs/heads/${BRANCH}"
+          git -C "${worktree}" commit \
+            -m "deploy: ${targets[*]} @ ${GITHUB_SHA::7}" \
+            ${MESSAGE:+-m "${MESSAGE}"} \
+            -m "Source commit: ${GITHUB_SHA}"
+
+          # Runs that touch the same projects are serialized by the calling
+          # workflow, so a rejected push means a run for *other* projects landed
+          # first (e.g. two prod releases published together). Every run writes
+          # only its own directories, so replay our commit on top and retry.
+          attempts=5
+          for attempt in $(seq 1 "${attempts}"); do
+            if git -C "${worktree}" push origin "HEAD:refs/heads/${BRANCH}"; then
+              break
+            fi
+            if [ "${attempt}" -eq "${attempts}" ]; then
+              echo "::error::Push to ${BRANCH} was rejected ${attempts} times"
+              exit 1
+            fi
+            echo "::warning::Push to ${BRANCH} rejected, replaying onto its new tip (attempt ${attempt}/${attempts})"
+            git -C "${worktree}" fetch --depth=1 origin "${BRANCH}"
+            # The fetch is shallow, so there is no merge base to find: replay
+            # exactly the one commit made above.
+            git -C "${worktree}" rebase --onto FETCH_HEAD HEAD~1
+          done
         fi
         git worktree remove --force "${worktree}"

@@ -9,3 +9,6 @@ patches:
   - path: api.yaml
   - path: cache.yaml
   - path: database.yaml
+
+transformers:
+  - release-annotations.yaml

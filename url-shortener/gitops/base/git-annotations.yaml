@@ -1,0 +1,11 @@
+---
+apiVersion: builtin
+kind: AnnotationsTransformer
+metadata:
+  name: git-annotations
+annotations:
+  grncunha.com/git-repository: git-repository-placeholder
+  grncunha.com/git-commit: git-sha-placeholder
+fieldSpecs:
+  - path: metadata/annotations
+    create: true

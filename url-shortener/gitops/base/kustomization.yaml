@@ -7,3 +7,6 @@ resources:
   - cache.yaml
   - database.yaml
   - migrations.yaml
+
+transformers:
+  - git-annotations.yaml

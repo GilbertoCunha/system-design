@@ -1,0 +1,51 @@
+---
+name: deploy-dev
+
+# Every push to main deploys every project to dev. That also guarantees each
+# commit on main has images for deploy-prod to promote.
+#
+# Adding a project: add a job calling build-project, and list it in the
+# `needs` of `publish`.
+
+on:
+  push:
+    branches:
+      - main
+
+# Every run publishes every project, so the newest pending run supersedes any
+# older one still waiting: only the latest commit's manifests matter.
+concurrency:
+  group: gitops-dev
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  url-shortener:
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+    uses: ./.github/workflows/build-project.yaml
+    with:
+      project: url-shortener
+      environment: dev
+      images: |
+        [
+          {"name": "url-shortener-backend", "context": "url-shortener", "dockerfile": "Dockerfile"}
+        ]
+
+  publish:
+    needs:
+      - url-shortener
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push to gitops/dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Push manifests to gitops/dev
+        uses: ./.github/actions/push-gitops
+        with:
+          artifact-pattern: gitops-dev-*
+          branch: gitops/dev
