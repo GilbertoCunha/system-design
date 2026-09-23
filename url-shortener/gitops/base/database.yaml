@@ -9,11 +9,17 @@ metadata:
   annotations:
     # Database is the first resource to be created
     argocd.argoproj.io/sync-wave: "-2"
-    # Monitoring
-    prometheus.io/scrape: "true"
-    prometheus.io/port: 9187
-    prometheus.io/path: /metrics
 spec:
+  inheritedMetadata:
+    labels:
+      app: url-shortener
+      role: db
+    annotations:
+      # Monitoring
+      prometheus.io/scrape: "true"
+      prometheus.io/port: 9187
+      prometheus.io/path: /metrics
+
   instances: 1
 
   resources:
