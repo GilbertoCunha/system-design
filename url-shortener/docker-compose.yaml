@@ -10,8 +10,7 @@ services:
       - "8080:8080"
     environment:
       POSTGRES_URI: postgresql://url_shortener:1234567890@database:5432/url_shortener
-      REDIS_USER: default
-      REDIS_PASSWORD: 1234567890
+      REDIS_URI: redis://cache:6379
     depends_on:
       cache:
         condition: service_started
@@ -62,7 +61,6 @@ services:
 
   cache:
     image: redis:8.10
-    command: redis-server --requirepass 1234567890
     ports:
       - "6379:6379"
 

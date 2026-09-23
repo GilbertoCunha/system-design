@@ -12,6 +12,4 @@ postgres:
     min_conns: 10
     max_conns: 50
 
-redis:
-  host: cache
-  port: 6379
+redis: {}

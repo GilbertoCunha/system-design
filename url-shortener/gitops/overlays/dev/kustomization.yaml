@@ -6,8 +6,5 @@ resources:
   - ../../base
 
 patches:
-  # Adds the per-environment DNS name to the database's LoadBalancer Service.
   - path: database.yaml
-
-# TODO: Deploy patch too
-#   - path: backend.yaml
+  - path: backend.yaml

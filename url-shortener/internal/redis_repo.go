@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -15,15 +14,15 @@ type RedisUrlRepo struct {
 	logger *slog.Logger
 }
 
-func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger) *RedisUrlRepo {
-	return &RedisUrlRepo{
-		client: redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port),
-			Password: c.Redis.Password,
-			Username: c.Redis.User,
-		}),
-		logger: logger,
+func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger) (*RedisUrlRepo, error) {
+	opts, err := redis.ParseURL(c.Redis.Uri)
+	if err != nil {
+		return nil, err
 	}
+	return &RedisUrlRepo{
+		client: redis.NewClient(opts),
+		logger: logger,
+	}, nil
 }
 
 // TODO: Error handling of context timeouts

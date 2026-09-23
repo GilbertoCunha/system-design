@@ -26,10 +26,7 @@ type AppConfig struct {
 	} `mapstructure:"postgres"`
 
 	Redis struct {
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
+		Uri string `mapstructure:"uri"`
 	} `mapstructure:"redis"`
 }
 
@@ -62,10 +59,7 @@ func NewAppConfig(environment Environment) (*AppConfig, error) {
 	if err := viper.BindEnv("postgres.uri", "POSTGRES_URI"); err != nil {
 		return nil, err
 	}
-	if err := viper.BindEnv("redis.user", "REDIS_USER"); err != nil {
-		return nil, err
-	}
-	if err := viper.BindEnv("redis.password", "REDIS_PASSWORD"); err != nil {
+	if err := viper.BindEnv("redis.uri", "REDIS_URI"); err != nil {
 		return nil, err
 	}
 

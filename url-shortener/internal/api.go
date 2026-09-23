@@ -51,7 +51,10 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	if err != nil {
 		return nil, err
 	}
-	redisRepo := NewRedisUrlRepo(config, logger)
+	redisRepo, err := NewRedisUrlRepo(config, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	// Creates Services
 	urlShortener := NewUrlShortenerService(

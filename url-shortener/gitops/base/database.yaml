@@ -26,17 +26,6 @@ spec:
   monitoring:
     enablePodMonitor: true
 ---
-# Direct access to PostgreSQL for a human with a SQL client. The mesh Gateway
-# cannot carry this: a Gateway listener is bound to one port and raw TCP has no
-# Host header or SNI to dispatch on, so an HTTPRoute would hand the Postgres
-# startup packet to an HTTP parser. A LoadBalancer Service instead takes its own
-# address from the Cilium pool, and the port stays 5432.
-#
-# CNPG owns url-shortener-db-rw and reconciles it, so this is a Service of our
-# own rather than an annotation on that one. The selector follows the primary
-# role, which CNPG moves during failover, so the address follows the primary.
-#
-# The DNS name is per-environment and lives in the overlay.
 apiVersion: v1
 kind: Service
 metadata:
@@ -48,17 +37,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   type: LoadBalancer
-
-  # Cilium announces the address over L2 and routes it in eBPF; the extra
-  # per-node port that a LoadBalancer Service gets by default is never used.
   allocateLoadBalancerNodePorts: false
-
-  # `Local` would preserve the client address, but it only forwards to a
-  # backend on the node that received the packet, and Cilium picks the node
-  # that announces the address without regard to where the backends are. With
-  # one database instance the announcing node usually has no local backend, and
-  # then it answers with a reset. `Cluster` lets any node forward, at the cost
-  # of SNATing the client to a node address -- see the NetworkPolicy below.
   externalTrafficPolicy: Cluster
 
   selector:
@@ -70,23 +49,6 @@ spec:
       targetPort: 5432
       protocol: TCP
 ---
-# The namespace denies by default, so the Service above would accept the
-# connection and then the packet would be dropped on the way to the pod -- a
-# hang, with nothing logged. This is the project-level rule the platform chart
-# leaves to us.
-#
-# A CiliumNetworkPolicy rather than a NetworkPolicy, because a source address
-# is not available to match on. Under `externalTrafficPolicy: Cluster` Cilium
-# SNATs an arriving connection to the cilium_host address of whichever node
-# took it, so every external client appears as one of the node router addresses
-# inside the pod CIDR -- never as itself, and never as anything in the node
-# range either. An ipBlock precise enough to be worth writing cannot be
-# written. Cilium does classify that traffic as `world`, which is the thing we
-# actually mean: reached us from outside the cluster.
-#
-# So this rule scopes the port, not the client. Who may open a connection is
-# settled by the Service being mesh-only and by PostgreSQL's own
-# authentication.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
