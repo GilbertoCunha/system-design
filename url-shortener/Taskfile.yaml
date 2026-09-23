@@ -58,17 +58,25 @@ tasks:
   # Tests #
   #########
 
-  test:e2e:
+  test:e2e:local:
     deps:
       - task: docker:up
     cmds:
       - go clean -testcache
       - go test ./test/e2e/...
 
-  test:load:*:
+  test:load:*:local:
     deps:
       - task: docker:up
     env:
       FILE: "{{index .MATCH 0}}"
     cmds:
       - k6 run test/load/$FILE.js
+
+  test:load:*:dev:
+    env:
+      FILE: "{{index .MATCH 0}}"
+    cmds:
+      - |
+        BASE_URL=https://url-shortener.dev.k8s.homelab.grncunha.com \
+        k6 run test/load/$FILE.js
