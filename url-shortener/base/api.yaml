@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-api
+  labels:
+    app: url-shortener
+    role: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: url-shortener
+      role: api
+  template:
+    metadata:
+      labels:
+        app: url-shortener
+        role: api
+    spec:
+      topologySpreadConstraints:
+        - topologyKey: kubernetes.io/hostname
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-api
+  labels:
+    app: url-shortener
+    role: api
+spec:
+  type: ClusterIP
+  selector:
+    app: url-shortener
+    role: api
+  ports:
+    - name: 8080-8080
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: url-shortener
+  labels:
+    app: url-shortener
+spec:
+  parentRefs:
+    - name: gw-internal-dev
+      namespace: gateway-system
+      sectionName: https
+    - name: gw-internal-dev
+      namespace: gateway-system
+      sectionName: http
+  hostnames:
+    - url-shortener.dev.k8s.homelab.grncunha.com
+  rules:
+    - backendRefs:
+        - name: url-shortener-api
+          port: 8080

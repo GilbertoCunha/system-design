@@ -1,0 +1,71 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: url-shortener-db
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    # Database is the first resource to be created
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  instances: 1
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 200Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+
+  storage:
+    size: 10Gi
+
+  monitoring:
+    enablePodMonitor: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-db-lb
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  externalTrafficPolicy: Cluster
+
+  selector:
+    cnpg.io/cluster: url-shortener-db
+    cnpg.io/instanceRole: primary
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-db-clients
+  labels:
+    app: url-shortener
+    role: db
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: url-shortener-db
+  ingress:
+    - fromEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP

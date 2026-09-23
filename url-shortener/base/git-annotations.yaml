@@ -1,0 +1,11 @@
+---
+apiVersion: builtin
+kind: AnnotationsTransformer
+metadata:
+  name: git-annotations
+annotations:
+  grncunha.com/git-repository: https://github.com/GilbertoCunha/system-design
+  grncunha.com/git-commit: 31df3f7afd1fa0e1e540d799223459663b99a248
+fieldSpecs:
+  - path: metadata/annotations
+    create: true

@@ -1,0 +1,58 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # The name carries the image SHA, so every deploy creates a *new* Job instead
+  # of mutating an existing one. Job specs are immutable, and Argo's server-side
+  # diff validates changes with a dry-run apply, so an in-place edit fails at
+  # comparison time and wedges the whole Application. A fresh name diffs cleanly
+  # the previous run is pruned.
+  name: migrations-31df3f7afd1fa0e1e540d799223459663b99a248
+  annotations:
+    # Between the database (-2) and the backend (0). A Job only reports healthy
+    # once it succeeds, and Argo waits for a wave to be healthy before applying
+    # the next, so the backend is never rolled out against an unmigrated schema.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: url-shortener
+        role: migrations
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: goose
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-31df3f7afd1fa0e1e540d799223459663b99a248
+          # Prevent privilege escalation
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          command:
+            - /bin/goose
+            - -dir
+            - /migrations
+            - postgres
+            - up
+          env:
+            - name: GOOSE_DBSTRING
+              valueFrom:
+                secretKeyRef:
+                  name: url-shortener-db-app
+                  key: uri
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+            limits:
+              cpu: 200m
+              memory: 100Mi
