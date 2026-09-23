@@ -6,5 +6,6 @@ resources:
   - ../../base
 
 patches:
-  - path: database.yaml
   - path: backend.yaml
+  - path: cache.yaml
+  - path: database.yaml
