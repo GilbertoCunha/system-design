@@ -37,24 +37,6 @@ prometheus.io/port: "<metrics port>"
 prometheus.io/path: "/metrics" # optional, this is the default
 ```
 
-### Postgres (CNPG)
-
-- CNPG already exposes metrics on port `9187`. They are **not scraped yet**,
-  because `enablePodMonitor: true` in `gitops/base/database.yaml` needs the
-  PodMonitor CRD.
-- Replace it with annotations on the pods through the Cluster spec:
-  `spec.inheritedMetadata.annotations` (port `9187`).
-- Import the CNPG Grafana dashboard (from the CNPG project) as a ConfigMap
-  in this repo.
-- Later: enable `pg_stat_statements` to find slow queries.
-
-### Redis
-
-- Add `oliver006/redis_exporter` as a sidecar in `gitops/base/cache.yaml`
-  (metrics on port `9121`) and annotate the pod.
-- Key metrics: memory used, connected clients, commands/sec, keyspace
-  hits/misses, evictions.
-
 ### API
 
 This matters most. The Go code has no metrics yet.
