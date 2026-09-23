@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>url shortener</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #11151a;
+      --fg: #c8d3c5;
+      --dim: #5f6b63;
+      --accent: #7dff9b;
+      --link: #7fb8ff;
+      --error: #ff7a7a;
+      --bevel-light: #2c343d;
+      --bevel-dark: #050608;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "VT323", ui-monospace, "Courier New", monospace;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    /* faint CRT scanlines */
+    body::after {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.025) 0 1px,
+        transparent 1px 3px
+      );
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 12vh 16px 48px;
+    }
+
+    pre.logo {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: clamp(11px, 3.4vw, 20px);
+      line-height: 1;
+      text-shadow: 0 0 6px rgba(125, 255, 155, 0.45);
+      overflow: hidden;
+    }
+
+    .tagline {
+      color: var(--dim);
+      margin: 0 0 28px;
+    }
+
+    .window {
+      background: var(--panel);
+      border: 2px solid;
+      border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+    }
+
+    .titlebar {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 10px;
+      background: linear-gradient(90deg, #1b3a2a, #11151a);
+      color: var(--accent);
+      font-size: 20px;
+    }
+
+    .titlebar span:last-child { letter-spacing: 4px; color: var(--dim); }
+
+    .body { padding: 20px; }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--dim);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="url"] {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--fg);
+      background: var(--bg);
+      border: 2px solid;
+      border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+      outline: none;
+      caret-color: var(--accent);
+    }
+
+    input[type="url"]:focus { border-color: var(--accent); }
+    input[type="url"]::placeholder { color: var(--dim); }
+
+    button {
+      padding: 4px 16px;
+      font: inherit;
+      color: var(--bg);
+      background: var(--accent);
+      border: 2px solid;
+      border-color: #c6ffd3 #2f7a44 #2f7a44 #c6ffd3;
+      cursor: pointer;
+    }
+
+    button:active {
+      border-color: #2f7a44 #c6ffd3 #c6ffd3 #2f7a44;
+      transform: translateY(1px);
+    }
+
+    button:disabled { opacity: 0.6; cursor: wait; }
+
+    button.ghost {
+      color: var(--fg);
+      background: transparent;
+      border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+    }
+
+    #status {
+      min-height: 1.25em;
+      margin: 16px 0 0;
+    }
+
+    #status.error { color: var(--error); }
+
+    .result {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border: 1px dashed var(--dim);
+    }
+
+    .result.show { display: block; }
+
+    .result a {
+      color: var(--link);
+      word-break: break-all;
+    }
+
+    .result a:visited { color: #c89bff; }
+
+    .result .row { margin-top: 10px; }
+
+    .cursor {
+      display: inline-block;
+      width: 0.55em;
+      height: 1em;
+      margin-left: 2px;
+      vertical-align: -0.15em;
+      background: var(--accent);
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      color: var(--dim);
+      font-size: 18px;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      width: 88px;
+      height: 31px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      line-height: 1;
+      text-align: center;
+      border: 1px solid var(--bevel-light);
+      background: var(--panel);
+    }
+
+    .badge b { color: var(--accent); font-weight: normal; }
+
+    hr {
+      border: 0;
+      border-top: 1px dashed var(--bevel-light);
+      margin: 12px 0;
+    }
+
+    @media (max-width: 480px) {
+      .row { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cursor { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <pre class="logo" aria-label="url shortener">
+ _   _ ____  _          ____  _                _
+| | | |  _ \| |        / ___|| |__   ___  _ __| |_
+| | | | |_) | |   ____ \___ \| '_ \ / _ \| '__| __|
+| |_| |  _ <| |__|____| ___) | | | | (_) | |  | |_
+ \___/|_| \_\_____|    |____/|_| |_|\___/|_|   \__|</pre>
+    <p class="tagline">&gt; long links in, short links out<span class="cursor"></span></p>
+
+    <section class="window">
+      <div class="titlebar"><span>shorten.exe</span><span>_ □ x</span></div>
+      <div class="body">
+        <form id="form">
+          <label for="url">paste a long url (https only):</label>
+          <div class="row">
+            <input id="url" type="url" required placeholder="https://example.com/some/very/long/path" autocomplete="off" autofocus>
+            <button id="submit" type="submit">shorten!</button>
+          </div>
+        </form>
+
+        <p id="status" role="status"></p>
+
+        <div id="result" class="result">
+          your short link:<br>
+          <a id="short" href="#" target="_blank" rel="noopener"></a>
+          <div class="row">
+            <button id="copy" class="ghost" type="button">copy</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="badges">
+        <div class="badge"><span>made w/<br><b>notepad</b></span></div>
+        <div class="badge"><span>powered by<br><b>go</b></span></div>
+        <div class="badge"><span>best viewed<br><b>800x600</b></span></div>
+      </div>
+      <hr>
+      est. 2026 &middot; no cookies, no tracking &middot; <a href="/healthz" style="color: var(--dim)">healthz</a>
+    </footer>
+  </main>
+
+  <script>
+    // Base URL of the backend. Empty string means "same origin as this page".
+    const API_BASE = "";
+
+    const form = document.getElementById("form");
+    const input = document.getElementById("url");
+    const submit = document.getElementById("submit");
+    const status = document.getElementById("status");
+    const result = document.getElementById("result");
+    const shortLink = document.getElementById("short");
+    const copyBtn = document.getElementById("copy");
+
+    function setStatus(text, isError = false) {
+      status.textContent = text;
+      status.classList.toggle("error", isError);
+    }
+
+    function shortUrlFor(code) {
+      const base = API_BASE || window.location.origin;
+      return `${base}/v1/url/${code}`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const longUrl = input.value.trim();
+
+      if (!longUrl.startsWith("https://")) {
+        setStatus("! error: url must start with https://", true);
+        result.classList.remove("show");
+        return;
+      }
+
+      submit.disabled = true;
+      result.classList.remove("show");
+      setStatus("connecting... please wait");
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ longUrl }),
+        });
+
+        if (res.status === 503) {
+          const retry = res.headers.get("Retry-After") || "a few";
+          throw new Error(`server is busy, try again in ${retry} seconds`);
+        }
+        if (!res.ok) {
+          const msg = (await res.text()).trim();
+          throw new Error(msg || `request failed (${res.status})`);
+        }
+
+        const { shortUrl } = await res.json();
+        const url = shortUrlFor(shortUrl);
+        shortLink.href = url;
+        shortLink.textContent = url;
+        result.classList.add("show");
+        copyBtn.textContent = "copy";
+        setStatus("done! ☺");
+      } catch (err) {
+        setStatus(`! error: ${err.message.toLowerCase()}`, true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(shortLink.textContent);
+        copyBtn.textContent = "copied!";
+      } catch {
+        copyBtn.textContent = "copy failed :(";
+      }
+    });
+  </script>
+</body>
+</html>

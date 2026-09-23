@@ -2,12 +2,18 @@ package internal
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 )
+
+// Embed static HTML file
+//
+//go:embed web/index.html
+var indexHTML []byte
 
 type API struct {
 	server    *http.Server
@@ -65,6 +71,10 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 
 	// Handler definition
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(indexHTML)
+	})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
