@@ -8,11 +8,6 @@ metadata:
     role: backend
 spec:
   replicas: 1
-  # Spread pods across nodes
-  topologySpreadConstraints:
-    - topologyKey: kubernetes.io/hostname
-      maxSkew: 1
-      whenUnsatisfiable: DoNotSchedule
   selector:
     matchLabels:
       app: url-shortener
@@ -23,6 +18,10 @@ spec:
         app: url-shortener
         role: backend
     spec:
+      topologySpreadConstraints:
+        - topologyKey: kubernetes.io/hostname
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
