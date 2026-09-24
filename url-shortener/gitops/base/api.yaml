@@ -17,6 +17,10 @@ spec:
       labels:
         app: url-shortener
         role: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /metrics
     spec:
       topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname

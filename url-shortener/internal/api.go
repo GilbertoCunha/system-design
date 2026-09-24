@@ -8,6 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Embed static HTML file
@@ -69,8 +72,13 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 		logger,
 	)
 
+	// Create middleware
+	reg := prometheus.NewRegistry()
+	metrics := NewMetrics(reg)
+
 	// Handler definition
 	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(indexHTML)
@@ -88,7 +96,7 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	// Server definition
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.App.Port),
-		Handler:           mux,
+		Handler:           MetricsMiddleware(metrics, mux),
 		ReadHeaderTimeout: time.Duration(config.App.ReadHeaderTimeoutSeconds) * time.Second,
 		ReadTimeout:       time.Duration(config.App.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout:      time.Duration(config.App.WriteTimeoutSeconds) * time.Second,
