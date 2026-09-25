@@ -19,6 +19,11 @@ type AppConfig struct {
 	Postgres struct {
 		Uri string `mapstructure:"uri"`
 
+		Timeouts struct {
+			AcquireTimeoutMs int `mapstructure:"acquire_timeout_ms"`
+			QueryTimeoutMs   int `mapstructure:"query_timeout_ms"`
+		} `mapstructure:"timeouts"`
+
 		Pool struct {
 			MinConns int `mapstructure:"min_conns"`
 			MaxConns int `mapstructure:"max_conns"`
@@ -27,6 +32,10 @@ type AppConfig struct {
 
 	Redis struct {
 		Uri string `mapstructure:"uri"`
+
+		Timeouts struct {
+			QueryTimeoutMs int `mapstructure:"query_timeout_ms"`
+		} `mapstructure:"timeouts"`
 	} `mapstructure:"redis"`
 }
 

@@ -14,6 +14,7 @@ import (
 type PgUrlRepo struct {
 	pool   *pgxpool.Pool
 	logger *slog.Logger
+	config *AppConfig
 }
 
 func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUrlRepo, error) {
@@ -32,11 +33,14 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUr
 	// Start background process for connection pool statistics gathering
 	go getPoolStats(ctx, pool, logger, 5)
 
-	return &PgUrlRepo{pool: pool, logger: logger}, nil
+	return &PgUrlRepo{pool: pool, logger: logger, config: c}, nil
 }
 
 func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
-	acqCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	acqCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
+	)
 	conn, err := r.pool.Acquire(acqCtx)
 	cancel()
 	if err != nil {
@@ -47,9 +51,13 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 	}
 	defer conn.Release()
 
-	// TODO: Context timeout error handling
+	queryCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs)*time.Millisecond,
+	)
 	start := time.Now()
-	longUrl, err := database.New(conn).GetLongUrl(ctx, shortUrl)
+	longUrl, err := database.New(conn).GetLongUrl(queryCtx, shortUrl)
+	cancel()
 	elapsed := time.Since(start)
 	r.logger.Debug("db:query_time",
 		"query", "GetLongUrl",
@@ -66,7 +74,10 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 }
 
 func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) error {
-	acqCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	acqCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
+	)
 	conn, err := r.pool.Acquire(acqCtx)
 	cancel()
 	if err != nil {
@@ -77,12 +88,16 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 	}
 	defer conn.Release()
 
-	// TODO: Context timeout error handling
+	queryCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs)*time.Millisecond,
+	)
 	start := time.Now()
 	queryLongUrl, err := database.New(conn).PutShortUrl(
-		ctx,
+		queryCtx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
+	cancel()
 	elapsed := time.Since(start)
 	r.logger.Debug("db:query_time",
 		"query", "PutShortUrl",

@@ -8,8 +8,13 @@ app:
   idle_timeout_seconds: 30
 
 postgres:
+  timeouts:
+    acquire_timeout_ms: 100
+    query_timeout_ms: 2000
   pool:
     min_conns: 10
     max_conns: 50
 
-redis: {}
+redis:
+  timeouts:
+    query_timeout_ms: 500

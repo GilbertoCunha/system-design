@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/url"
 	"regexp"
-	"time"
 )
 
 type UrlShortenerService struct {
@@ -39,12 +38,9 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 	// In case there is a collision in ShortUrl creation,
 	// meaning two different longUrls having the same hash,
 	// then simply add a suffix to the longUrl and try again
-	// TODO: Decouple HTTP request timeout from query timeout
 	var shortUrl string
 	ok := false
 	urlToHash := longUrl
-	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
-	defer cancel()
 	for !ok {
 		shortUrl = GetMD5Hash(urlToHash)
 		dberr := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
@@ -89,9 +85,6 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 	}
 
 	// Retrieve longUrl from DB
-	// TODO: Decouple HTTP request timeout from query timeout
-	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
-	defer cancel()
 	longUrl, err = u.dbUrlRepo.GetLongUrl(ctx, shortUrl)
 	if err != nil {
 		return "", err

@@ -12,6 +12,7 @@ import (
 type RedisUrlRepo struct {
 	client *redis.Client
 	logger *slog.Logger
+	config *AppConfig
 }
 
 func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger) (*RedisUrlRepo, error) {
@@ -22,12 +23,15 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger) (*RedisUrlRepo, error) {
 	return &RedisUrlRepo{
 		client: redis.NewClient(opts),
 		logger: logger,
+		config: c,
 	}, nil
 }
 
-// TODO: Error handling of context timeouts
 func (r *RedisUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	ctx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Redis.Timeouts.QueryTimeoutMs)*time.Millisecond,
+	)
 	defer cancel()
 
 	start := time.Now()
@@ -51,9 +55,11 @@ func (r *RedisUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string,
 	return longUrl, nil
 }
 
-// TODO: Error handling of context timeouts
 func (r *RedisUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) error {
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	ctx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Redis.Timeouts.QueryTimeoutMs)*time.Millisecond,
+	)
 	defer cancel()
 
 	// TODO: Figure out expiration
