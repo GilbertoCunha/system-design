@@ -64,7 +64,7 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	if err != nil {
 		return nil, err
 	}
-	redisRepo, err := NewRedisUrlRepo(config, logger)
+	redisRepo, err := NewRedisUrlRepo(config, logger, reg)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/extra/redisprometheus/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -15,13 +17,19 @@ type RedisUrlRepo struct {
 	config *AppConfig
 }
 
-func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger) (*RedisUrlRepo, error) {
+func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registerer) (*RedisUrlRepo, error) {
 	opts, err := redis.ParseURL(c.Redis.Uri)
 	if err != nil {
 		return nil, err
 	}
+
+	// Redis pool metrics
+	client := redis.NewClient(opts)
+	collector := redisprometheus.NewCollector("", "", client)
+	reg.MustRegister(collector)
+
 	return &RedisUrlRepo{
-		client: redis.NewClient(opts),
+		client: client,
 		logger: logger,
 		config: c,
 	}, nil
