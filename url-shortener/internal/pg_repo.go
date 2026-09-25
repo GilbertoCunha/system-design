@@ -7,17 +7,26 @@ import (
 	"time"
 
 	"github.com/GilbertoCunha/system-design/url-shortener/internal/database"
+	"github.com/IBM/pgxpoolprometheus"
 	pgx "github.com/jackc/pgx/v5"
 	pgxpool "github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type PgUrlRepo struct {
-	pool   *pgxpool.Pool
-	logger *slog.Logger
-	config *AppConfig
+type PgMetrics struct {
+	pgQueryDurationSeconds *prometheus.HistogramVec
+	pgUrlCollisionTotal    prometheus.Counter
 }
 
-func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUrlRepo, error) {
+type PgUrlRepo struct {
+	pool    *pgxpool.Pool
+	logger  *slog.Logger
+	config  *AppConfig
+	metrics *PgMetrics
+}
+
+func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger, reg prometheus.Registerer) (*PgUrlRepo, error) {
 	config, err := pgxpool.ParseConfig(c.Postgres.Uri)
 	if err != nil {
 		return nil, err
@@ -29,25 +38,31 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger) (*PgUr
 	if err != nil {
 		return nil, err
 	}
+	collector := pgxpoolprometheus.NewCollector(pool, map[string]string{})
+	reg.MustRegister(collector)
 
-	// Start background process for connection pool statistics gathering
-	go getPoolStats(ctx, pool, logger, 5)
+	// Create prometheus metrics
+	metrics := &PgMetrics{
+		pgQueryDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
+			Name: "pg_query_duration_seconds",
+			Help: "Postgres query duration in seconds",
+		},
+			[]string{"query", "outcome"},
+		),
+		pgUrlCollisionTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "short_url_collisions_total",
+			Help: "Total number of short url collisions",
+		}),
+	}
+	repo := &PgUrlRepo{pool: pool, logger: logger, config: c, metrics: metrics}
 
-	return &PgUrlRepo{pool: pool, logger: logger, config: c}, nil
+	return repo, nil
 }
 
 func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, error) {
-	acqCtx, cancel := context.WithTimeout(
-		ctx,
-		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
-	)
-	conn, err := r.pool.Acquire(acqCtx)
-	cancel()
+	conn, err := r.AcquireConn(ctx)
 	if err != nil {
-		r.logger.Warn("db:conn_acquire_timeout",
-			"query", "GetLongUrl",
-		)
-		return "", &Overloaded{}
+		return "", err
 	}
 	defer conn.Release()
 
@@ -55,36 +70,33 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 		ctx,
 		time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs)*time.Millisecond,
 	)
+	defer cancel()
+
 	start := time.Now()
 	longUrl, err := database.New(conn).GetLongUrl(queryCtx, shortUrl)
-	cancel()
-	elapsed := time.Since(start)
-	r.logger.Debug("db:query_time",
-		"query", "GetLongUrl",
-		"time_ms", elapsed/time.Millisecond,
-	)
+	outcome := queryOutcome(err)
+	elapsed := time.Since(start).Seconds()
+	r.metrics.pgQueryDurationSeconds.With(prometheus.Labels{
+		"query":   "get_long_url",
+		"outcome": outcome,
+	}).Observe(elapsed)
 
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", &ShortUrlNotFound{shortUrl: shortUrl}
-		}
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return "", &ShortUrlNotFound{shortUrl: shortUrl}
+	case errors.Is(err, context.DeadlineExceeded):
+		return "", &Overloaded{msg: err.Error()}
+	case err != nil:
 		return "", err
+	default:
+		return longUrl, nil
 	}
-	return longUrl, nil
 }
 
 func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl string) error {
-	acqCtx, cancel := context.WithTimeout(
-		ctx,
-		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
-	)
-	conn, err := r.pool.Acquire(acqCtx)
-	cancel()
+	conn, err := r.AcquireConn(ctx)
 	if err != nil {
-		r.logger.Warn("db:conn_acquire_timeout",
-			"query", "PutShortUrl",
-		)
-		return &Overloaded{}
+		return err
 	}
 	defer conn.Release()
 
@@ -92,19 +104,25 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 		ctx,
 		time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs)*time.Millisecond,
 	)
+	defer cancel()
 	start := time.Now()
+
 	queryLongUrl, err := database.New(conn).PutShortUrl(
 		queryCtx,
 		database.PutShortUrlParams{ShortUrl: shortUrl, LongUrl: longUrl},
 	)
-	cancel()
-	elapsed := time.Since(start)
-	r.logger.Debug("db:query_time",
-		"query", "PutShortUrl",
-		"time_ms", elapsed/time.Millisecond,
-	)
+	outcome := queryOutcome(err)
+	elapsed := time.Since(start).Seconds()
+	r.metrics.pgQueryDurationSeconds.With(prometheus.Labels{
+		"query":   "put_short_url",
+		"outcome": outcome,
+	}).Observe(elapsed)
 
-	if err != nil {
+	// Error handling
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return &Overloaded{msg: err.Error()}
+	case err != nil:
 		return err
 	}
 
@@ -112,41 +130,47 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 	// 1. If it's the same as longUrl, then this URL has already been shortened
 	// 2. If it's a different longUrl, then an actual collision occurred
 	if queryLongUrl != longUrl {
+		r.metrics.pgUrlCollisionTotal.Inc()
 		return &ShortUrlCollision{longUrl1: longUrl, longUrl2: queryLongUrl}
 	}
 
 	return nil
 }
 
-func (r *PgUrlRepo) Close() {
-	r.pool.Close()
+func queryOutcome(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, pgx.ErrNoRows):
+		return "not_found"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	default:
+		return "error"
+	}
 }
 
-func getPoolStats(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, frequencySeconds int) {
-	ticker := time.NewTicker(time.Duration(frequencySeconds) * time.Second)
-	defer ticker.Stop()
-	var prev *pgxpool.Stat
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			cur := pool.Stat()
-			if prev != nil {
-				acquires := cur.AcquireCount() - prev.AcquireCount()
-				waited := cur.AcquireDuration() - prev.AcquireDuration()
-				if acquires > 0 {
-					logger.Info("pool",
-						"avg_wait_ms", waited/(time.Duration(acquires)*time.Millisecond),
-						"empty_acquires", cur.EmptyAcquireCount()-prev.EmptyAcquireCount(),
-						"in_use", cur.AcquiredConns(),
-						"idle", cur.IdleConns(),
-						"total", cur.TotalConns(),
-						"max", cur.MaxConns(),
-					)
-				}
-			}
-			prev = cur
-		}
+func (r *PgUrlRepo) AcquireConn(ctx context.Context) (*pgxpool.Conn, error) {
+	acqCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
+	)
+	conn, err := r.pool.Acquire(acqCtx)
+	defer cancel()
+
+	// Check for context deadline exceeded error
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return nil, &Overloaded{msg: err.Error()}
+	case err != nil:
+		return nil, err
+	default:
+		return conn, nil
 	}
+}
+
+func (r *PgUrlRepo) Close() {
+	r.pool.Close()
 }

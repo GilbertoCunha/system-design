@@ -55,8 +55,12 @@ func (a *API) Close() error {
 }
 
 func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, error) {
+	// Create metrics
+	reg := prometheus.NewRegistry()
+	metrics := NewMetrics(reg)
+
 	// Creates Repositories
-	pgRepo, err := NewPgUrlRepo(ctx, config, logger)
+	pgRepo, err := NewPgUrlRepo(ctx, config, logger, reg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,10 +75,6 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 		redisRepo,
 		logger,
 	)
-
-	// Create middleware
-	reg := prometheus.NewRegistry()
-	metrics := NewMetrics(reg)
 
 	// Handler definition
 	mux := http.NewServeMux()
