@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -57,6 +58,8 @@ func (a *API) Close() error {
 func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, error) {
 	// Create metrics
 	reg := prometheus.NewRegistry()
+	reg.MustRegister(collectors.NewGoCollector())
+	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	metrics := NewMetrics(reg)
 
 	// Creates Repositories
