@@ -7,14 +7,20 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/extra/redisprometheus/v9"
 	"github.com/redis/go-redis/v9"
 )
 
+type redisMetrics struct {
+	redisQueryDurationSeconds *prometheus.HistogramVec
+}
+
 type RedisUrlRepo struct {
-	client *redis.Client
-	logger *slog.Logger
-	config *AppConfig
+	client  *redis.Client
+	logger  *slog.Logger
+	config  *AppConfig
+	metrics *redisMetrics
 }
 
 func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registerer) (*RedisUrlRepo, error) {
@@ -22,16 +28,28 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registere
 	if err != nil {
 		return nil, err
 	}
+	opts.ContextTimeoutEnabled = true
 
 	// Redis pool metrics
 	client := redis.NewClient(opts)
-	collector := redisprometheus.NewCollector("", "", client)
+	collector := redisprometheus.NewCollector("redis", "", client)
 	reg.MustRegister(collector)
 
+	// Custom redis metrics
+	metrics := &redisMetrics{
+		redisQueryDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
+			Name: "redis_query_duration_seconds",
+			Help: "Duration of redis queries",
+		},
+			[]string{"query", "outcome"},
+		),
+	}
+
 	return &RedisUrlRepo{
-		client: client,
-		logger: logger,
-		config: c,
+		client:  client,
+		logger:  logger,
+		config:  c,
+		metrics: metrics,
 	}, nil
 }
 
@@ -42,21 +60,22 @@ func (r *RedisUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string,
 	)
 	defer cancel()
 
+	// Redis query and metrics
 	start := time.Now()
 	longUrl, err := r.client.Get(ctx, shortUrl).Result()
-	elapsed := time.Since(start)
-	r.logger.Debug("redis:query_time",
-		"query", "get_long_url",
-		"time_ms", elapsed/time.Millisecond,
-	)
+	elapsed := time.Since(start).Seconds()
+	outcome := redisQueryOutcome(err)
+	r.metrics.redisQueryDurationSeconds.With(prometheus.Labels{
+		"query":   "get_long_url",
+		"outcome": outcome,
+	}).Observe(elapsed)
 
+	// Error handling
 	if errors.Is(err, redis.Nil) {
-		return "", &ShortUrlNotFound{}
+		return "", &ShortUrlNotFound{shortUrl: shortUrl}
+	} else if errors.Is(err, context.DeadlineExceeded) {
+		return "", &Overloaded{msg: err.Error()}
 	} else if err != nil {
-		r.logger.Error("redis:error",
-			"query", "get_long_url",
-			"error", err.Error(),
-		)
 		return "", err
 	}
 
@@ -70,24 +89,37 @@ func (r *RedisUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl
 	)
 	defer cancel()
 
-	// TODO: Figure out expiration
+	// Redis query and metrics
 	start := time.Now()
 	err := r.client.Set(ctx, shortUrl, longUrl, 0).Err()
-	elapsed := time.Since(start)
-	r.logger.Debug("redis:query_time",
-		"query", "put_short_url",
-		"time_ms", elapsed/time.Millisecond,
-	)
+	elapsed := time.Since(start).Seconds()
+	outcome := redisQueryOutcome(err)
+	r.metrics.redisQueryDurationSeconds.With(prometheus.Labels{
+		"query":   "put_short_url",
+		"outcome": outcome,
+	}).Observe(elapsed)
 
-	if err != nil {
-		r.logger.Error("redis:error",
-			"query", "put_short_url",
-			"error", err.Error(),
-		)
-		return err
+	// Error handling
+	if errors.Is(err, context.DeadlineExceeded) {
+		return &Overloaded{msg: err.Error()}
 	}
 
-	return nil
+	return err
+}
+
+func redisQueryOutcome(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, redis.Nil):
+		return "not_found"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	default:
+		return "error"
+	}
 }
 
 func (r *RedisUrlRepo) Close() error {

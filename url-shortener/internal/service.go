@@ -43,20 +43,17 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 	urlToHash := longUrl
 	for !ok {
 		shortUrl = GetMD5Hash(urlToHash)
-		dberr := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
+		err := u.dbUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
 
-		_, collision := errors.AsType[*ShortUrlCollision](dberr)
-		if dberr != nil && !collision {
-			return "", dberr
-		} else if dberr != nil {
+		_, collision := errors.AsType[*ShortUrlCollision](err)
+		if err != nil && !collision {
+			return "", err
+		} else if err != nil {
 			u.logger.Warn("hash collision", "hash", shortUrl, "url", urlToHash)
 			urlToHash += "1" // add suffix to hash again
 		} else {
 			// Write to cache before closing
-			err := u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
-			if err != nil {
-				return "", err
-			}
+			u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
 			ok = true
 		}
 	}
@@ -80,8 +77,6 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 	longUrl, err := u.cacheUrlRepo.GetLongUrl(ctx, shortUrl)
 	if err == nil {
 		return longUrl, nil
-	} else if _, ok := errors.AsType[*ShortUrlNotFound](err); !ok {
-		return "", err
 	}
 
 	// Retrieve longUrl from DB
@@ -89,6 +84,9 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 	if err != nil {
 		return "", err
 	}
+
+	// Write back to cache (there was a cache miss for some reason!)
+	u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
 
 	return longUrl, nil
 }
