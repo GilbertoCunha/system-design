@@ -34,6 +34,10 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registere
 	client := redis.NewClient(opts)
 	collector := redisprometheus.NewCollector("redis", "", client)
 	reg.MustRegister(collector)
+	reg.MustRegister(newRedisPoolCollector(
+		client,
+		time.Duration(c.Redis.Timeouts.QueryTimeoutMs)*time.Millisecond,
+	))
 
 	// Custom redis metrics
 	metrics := &redisMetrics{

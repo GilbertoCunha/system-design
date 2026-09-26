@@ -17,6 +17,7 @@ import (
 type PgMetrics struct {
 	pgQueryDurationSeconds       *prometheus.HistogramVec
 	pgPoolAcquireDurationSeconds *prometheus.HistogramVec
+	pgPoolConnHeldSecondsTotal   prometheus.Counter
 	pgUrlCollisionTotal          prometheus.Counter
 }
 
@@ -69,6 +70,14 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger, reg pr
 		},
 			[]string{"outcome"},
 		),
+		// Its rate is the average number of connections in use (time held per
+		// second), so divided by pgxpool_max_conns it's how full the pool is
+		// on average. The pool's own "acquired" gauge is a snapshot per
+		// scrape and misses how busy the pool is between them.
+		pgPoolConnHeldSecondsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "pg_pool_conn_held_seconds_total",
+			Help: "Total time Postgres pool connections were held, from acquire to release",
+		}),
 		pgUrlCollisionTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "short_url_collisions_total",
 			Help: "Total number of short url collisions",
@@ -83,6 +92,17 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger, reg pr
 			metrics.pgPoolAcquireDurationSeconds.WithLabelValues(outcome)
 		}
 	}
+	// Timeouts from the config, so dashboards draw them as limits instead of
+	// hard-coding values that change here
+	promauto.With(reg).NewGauge(prometheus.GaugeOpts{
+		Name: "pg_pool_acquire_timeout_seconds",
+		Help: "Timeout for getting a connection from the Postgres pool, from the config",
+	}).Set(float64(c.Postgres.Timeouts.AcquireTimeoutMs) / 1000)
+	promauto.With(reg).NewGauge(prometheus.GaugeOpts{
+		Name: "pg_query_timeout_seconds",
+		Help: "Timeout for each Postgres query, from the config",
+	}).Set(float64(c.Postgres.Timeouts.QueryTimeoutMs) / 1000)
+
 	repo := &PgUrlRepo{pool: pool, logger: logger, config: c, metrics: metrics}
 
 	return repo, nil
@@ -93,7 +113,7 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 	if err != nil {
 		return "", err
 	}
-	defer conn.Release()
+	defer r.release(conn, time.Now())
 
 	queryCtx, cancel := context.WithTimeout(
 		ctx,
@@ -133,7 +153,7 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 	if err != nil {
 		return err
 	}
-	defer conn.Release()
+	defer r.release(conn, time.Now())
 
 	queryCtx, cancel := context.WithTimeout(
 		ctx,
@@ -222,6 +242,12 @@ func (r *PgUrlRepo) AcquireConn(ctx context.Context) (*pgxpool.Conn, error) {
 	default:
 		return conn, nil
 	}
+}
+
+// Returns conn to the pool and records how long it was held
+func (r *PgUrlRepo) release(conn *pgxpool.Conn, acquired time.Time) {
+	conn.Release()
+	r.metrics.pgPoolConnHeldSecondsTotal.Add(time.Since(acquired).Seconds())
 }
 
 func (r *PgUrlRepo) Close() {

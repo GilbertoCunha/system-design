@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -58,7 +59,14 @@ func (a *API) Close() error {
 func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, error) {
 	// Create metrics
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(collectors.NewGoCollector())
+	reg.MustRegister(collectors.NewGoCollector(
+		// Also go_sched_latencies_seconds: how long goroutines wait for a
+		// thread before running. CPU % can look fine while this grows, as
+		// when the API ran on one thread with ~2000 goroutines queued.
+		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{
+			Matcher: regexp.MustCompile(`^/sched/latencies:seconds$`),
+		}),
+	))
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	metrics := NewMetrics(reg)
 
