@@ -1683,6 +1683,28 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
+                    "refId": "RWAIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(redis_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "Redis pool wait",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
                     "refId": "REDIS",
                     "query": {
                       "kind": "DataQuery",
@@ -7935,7 +7957,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max_over_time((sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9 + (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))))[$__range:$__rate_interval])",
+                        "expr": "max_over_time((sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))[$__range:$__rate_interval])",
                         "legendFormat": "",
                         "range": false,
                         "interval": "5s",
@@ -8411,7 +8433,7 @@
         "spec": {
           "id": 65,
           "title": "Requests waiting for a connection (avg)",
-          "description": "Time spent waiting for a pool connection, per second: the average number of requests queued (Little's law). From counters, so short queues count. Redis only counts waits that got a connection: waits that timed out show up in \"Failures by cause\". go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
+          "description": "Average number of requests waiting for a pool connection: time spent waiting per second (Little's law). From counters, so short queues count; timeouts included.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8431,7 +8453,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9",
+                        "expr": "sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "Postgres",
                         "range": true,
                         "interval": "5s"
@@ -8453,7 +8475,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval])))",
+                        "expr": "sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "Redis",
                         "range": true,
                         "interval": "5s"
@@ -8554,7 +8576,7 @@
         "spec": {
           "id": 66,
           "title": "Average time per request, by part",
-          "description": "Stacked, the parts add up to the average request time (dashed). \"API itself\" is the rest: its own CPU work and waiting for a thread. Redis waits cut short by a timeout count as \"Redis command\". Averages, not p99: percentiles can't be stacked. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
+          "description": "Stacked, the parts add up to the average request time (dashed). \"API itself\" is the rest: its own work, holding connections between queries, and waiting for CPU. Averages, not p99: percentiles can't be stacked.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8618,7 +8640,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))), 0)) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "waiting for a Redis connection",
                         "range": true,
                         "interval": "5s"
@@ -8640,7 +8662,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))), 0) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "Redis command",
                         "range": true,
                         "interval": "5s"
@@ -8662,7 +8684,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "clamp_min(sum(rate(http_request_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])) - sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "clamp_min(sum(rate(http_request_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])) - sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "API itself",
                         "range": true,
                         "interval": "5s"
@@ -8899,6 +8921,28 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
+                    "refId": "RACQ",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(redis_pool_acquire_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout\"}[$__rate_interval]))",
+                        "legendFormat": "Redis: acquire timeout",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
                     "refId": "RT",
                     "query": {
                       "kind": "DataQuery",
@@ -8910,7 +8954,7 @@
                       "spec": {
                         "editorMode": "code",
                         "expr": "sum(rate(redis_query_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout\"}[$__rate_interval]))",
-                        "legendFormat": "Redis: timeout",
+                        "legendFormat": "Redis: command timeout",
                         "range": true,
                         "interval": "5s"
                       }
@@ -9256,8 +9300,8 @@
         "kind": "Panel",
         "spec": {
           "id": 71,
-          "title": "API pool waits",
-          "description": "Commands that had to wait for a free connection, and the average number waiting. Only waits that got a connection: those cut short by a timeout are Redis timeouts in \"Commands per second by outcome\".",
+          "title": "API pool acquire time",
+          "description": "Time a command waited for a free Redis connection. Timeouts included.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9267,7 +9311,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "N",
+                    "refId": "P50",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -9277,8 +9321,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_pool_wait_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
-                        "legendFormat": "waits/s",
+                        "expr": "histogram_quantile(0.5, sum by (le) (rate(redis_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "p50",
                         "range": true,
                         "interval": "5s"
                       }
@@ -9289,7 +9333,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "Q",
+                    "refId": "P99",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -9299,8 +9343,30 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval])))",
-                        "legendFormat": "waiting (avg, incl. timed out)",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(redis_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "p99",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "LIM",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "max(redis_query_timeout_seconds{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
+                        "legendFormat": "timeout",
                         "range": true,
                         "interval": "5s"
                       }
@@ -9345,7 +9411,8 @@
                     "lineWidth": 1,
                     "pointSize": 5,
                     "scaleDistribution": {
-                      "type": "linear"
+                      "type": "log",
+                      "log": 10
                     },
                     "showPoints": "auto",
                     "showValues": false,
@@ -9371,10 +9438,33 @@
                       }
                     ]
                   },
-                  "unit": "short",
+                  "unit": "s",
                   "min": 0
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "timeout"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [10, 10],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "color",
+                        "value": {
+                          "mode": "fixed",
+                          "fixedColor": "red"
+                        }
+                      }
+                    ]
+                  }
+                ]
               },
               "options": {
                 "legend": {
@@ -9516,720 +9606,6 @@
           }
         }
       },
-      "panel-73": {
-        "kind": "Panel",
-        "spec": {
-          "id": 73,
-          "title": "Postgres pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "USE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
-                        "legendFormat": "in use",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "WAIT",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "IDLE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
-                        "legendFormat": "idle while held",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineStyle": {
-                      "fill": "solid"
-                    },
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "percent",
-                  "min": 0,
-                  "max": 100
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "wait share"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [10, 10],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "idle while held"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [2, 6],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "none"
-                }
-              }
-            },
-            "version": "13.2.0"
-          }
-        }
-      },
-      "panel-74": {
-        "kind": "Panel",
-        "spec": {
-          "id": 74,
-          "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "USE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
-                        "legendFormat": "in use",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "WAIT",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) / ((sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) + clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))))",
-                        "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineStyle": {
-                      "fill": "solid"
-                    },
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "percent",
-                  "min": 0,
-                  "max": 100
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "wait share"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [10, 10],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "none"
-                }
-              }
-            },
-            "version": "13.2.0"
-          }
-        }
-      },
-      "panel-75": {
-        "kind": "Panel",
-        "spec": {
-          "id": 75,
-          "title": "Postgres pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "USE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
-                        "legendFormat": "in use",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "WAIT",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "IDLE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
-                        "legendFormat": "idle while held",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineStyle": {
-                      "fill": "solid"
-                    },
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "percent",
-                  "min": 0,
-                  "max": 100
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "wait share"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [10, 10],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "idle while held"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [2, 6],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "none"
-                }
-              }
-            },
-            "version": "13.2.0"
-          }
-        }
-      },
-      "panel-76": {
-        "kind": "Panel",
-        "spec": {
-          "id": 76,
-          "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "USE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
-                        "legendFormat": "in use",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "WAIT",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) / ((sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) + clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))))",
-                        "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
-                    "lineStyle": {
-                      "fill": "solid"
-                    },
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "percent",
-                  "min": 0,
-                  "max": 100
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "wait share"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [10, 10],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "none"
-                }
-              }
-            },
-            "version": "13.2.0"
-          }
-        }
-      },
       "panel-77": {
         "kind": "Panel",
         "spec": {
@@ -10329,6 +9705,770 @@
                   },
                   "unit": "cps",
                   "min": 0
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-78": {
+        "kind": "Panel",
+        "spec": {
+          "id": 78,
+          "title": "Postgres pool: where request time goes",
+          "description": "All the time requests spend on the Postgres pool, split into waiting for a connection, running a query on it, and holding it without a query (e.g. waiting for CPU, or work between queries). Stacked, always 100%.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "WAIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "waiting for a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "QUERY",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * (sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0)) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "running a query",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "IDLE",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "holding without a query",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 60,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-79": {
+        "kind": "Panel",
+        "spec": {
+          "id": 79,
+          "title": "Redis pool: where request time goes",
+          "description": "All the time commands spend on the Redis pool, split into waiting for a connection and using it (the command, network included). Stacked, always 100%.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "WAIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "waiting for a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "USE",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "using a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 60,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-80": {
+        "kind": "Panel",
+        "spec": {
+          "id": 80,
+          "title": "Connection pools, % busy",
+          "description": "Average share of each pool's connections held, from how long they are held: a true average, not a snapshot. Not the same question as the panels beside it: a pool can be 30% busy on average while requests queue in short bursts.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "PG",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
+                        "legendFormat": "Postgres",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "REDIS",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
+                        "legendFormat": "Redis",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-81": {
+        "kind": "Panel",
+        "spec": {
+          "id": 81,
+          "title": "Postgres pool: where request time goes",
+          "description": "All the time requests spend on the Postgres pool, split into waiting for a connection, running a query on it, and holding it without a query (e.g. waiting for CPU, or work between queries). Stacked, always 100%.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "WAIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "waiting for a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "QUERY",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * (sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0)) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "running a query",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "IDLE",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * clamp_min(sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(pg_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / (sum(rate(pg_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(pg_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "holding without a query",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 60,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-82": {
+        "kind": "Panel",
+        "spec": {
+          "id": 82,
+          "title": "Redis pool: where request time goes",
+          "description": "All the time commands spend on the Redis pool, split into waiting for a connection and using it (the command, network included). Stacked, always 100%.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "WAIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "waiting for a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "USE",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_acquire_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_pool_conn_held_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "using a connection",
+                        "range": true,
+                        "interval": "5s"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 60,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100
                 },
                 "overrides": []
               },
@@ -10593,7 +10733,7 @@
                                   "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-73"
+                                    "name": "panel-78"
                                   }
                                 }
                               },
@@ -10606,7 +10746,7 @@
                                   "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-74"
+                                    "name": "panel-79"
                                   }
                                 }
                               },
@@ -10619,7 +10759,20 @@
                                   "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-46"
+                                    "name": "panel-80"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-65"
                                   }
                                 }
                               }
@@ -11259,7 +11412,7 @@
                                   "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-75"
+                                    "name": "panel-81"
                                   }
                                 }
                               },
@@ -11456,7 +11609,7 @@
                                   "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
-                                    "name": "panel-76"
+                                    "name": "panel-82"
                                   }
                                 }
                               },
