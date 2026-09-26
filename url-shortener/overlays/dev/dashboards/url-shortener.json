@@ -7483,8 +7483,8 @@
         "kind": "Panel",
         "spec": {
           "id": 55,
-          "title": "Requests per second",
-          "description": "",
+          "title": "Peak requests per second",
+          "description": "Over the selected time range.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7504,10 +7504,11 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "max_over_time((sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])))[$__range:$__rate_interval])",
                         "legendFormat": "",
-                        "range": true,
-                        "interval": "5s"
+                        "range": false,
+                        "interval": "5s",
+                        "instant": true
                       }
                     }
                   }
@@ -7541,7 +7542,7 @@
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -7564,7 +7565,7 @@
         "spec": {
           "id": 56,
           "title": "Errors (5xx)",
-          "description": "Share of requests answered with 5xx.",
+          "description": "Over the selected time range. Share of requests answered with 5xx.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7584,10 +7585,11 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__rate_interval])) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "100 * sum(increase(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__range])) / sum(increase(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__range]))",
                         "legendFormat": "",
-                        "range": true,
-                        "interval": "5s"
+                        "range": false,
+                        "interval": "5s",
+                        "instant": true
                       }
                     }
                   }
@@ -7625,7 +7627,7 @@
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -7648,7 +7650,7 @@
         "spec": {
           "id": 57,
           "title": "p99 latency",
-          "description": "Inside the API. Yellow at 100ms, red at 500ms: the load tests' targets.",
+          "description": "Over the selected time range. Inside the API. Yellow at 100ms, red at 500ms: the load tests' targets.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7668,10 +7670,11 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le) (increase(http_request_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__range])))",
                         "legendFormat": "",
-                        "range": true,
-                        "interval": "5s"
+                        "range": false,
+                        "interval": "5s",
+                        "instant": true
                       }
                     }
                   }
@@ -7713,7 +7716,7 @@
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -7735,8 +7738,8 @@
         "kind": "Panel",
         "spec": {
           "id": 58,
-          "title": "API CPU, % of limit",
-          "description": "Averaged over the rate window: short bursts are smoothed away. See the scheduler tile.",
+          "title": "Peak API CPU, % of limit",
+          "description": "Over the selected time range. Averaged over the rate window: short bursts are smoothed away. See the scheduler tile.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7756,9 +7759,10 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(container_cpu_usage_seconds_total{namespace=\"$Environment\", container=\"api\"}[$__rate_interval])) / sum(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", container=\"api\", resource=\"cpu\"})",
+                        "expr": "max_over_time((100 * sum(rate(container_cpu_usage_seconds_total{namespace=\"$Environment\", container=\"api\"}[$__rate_interval])) / sum(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", container=\"api\", resource=\"cpu\"}))[$__range:$__rate_interval])",
                         "legendFormat": "",
-                        "range": true
+                        "range": false,
+                        "instant": true
                       }
                     }
                   }
@@ -7800,7 +7804,7 @@
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -7822,8 +7826,8 @@
         "kind": "Panel",
         "spec": {
           "id": 59,
-          "title": "Goroutine wait for CPU (p99)",
-          "description": "How long goroutines wait for a thread before running. Grows when the API is short of CPU, even while CPU % looks fine. Coarse: the histogram has one bucket per x8.",
+          "title": "Peak API CPU pressure",
+          "description": "Over the selected time range. Share of time the container had work ready but was waiting for CPU (kernel CPU pressure): hitting its CPU limit, or a busy node. From a counter, so short waits count.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7843,10 +7847,10 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(go_sched_latencies_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "expr": "max_over_time((100 * sum(rate(container_pressure_cpu_waiting_seconds_total{namespace=\"$Environment\", container=~\"api\"}[$__rate_interval])))[$__range:$__rate_interval])",
                         "legendFormat": "",
-                        "range": true,
-                        "interval": "5s"
+                        "range": false,
+                        "instant": true
                       }
                     }
                   }
@@ -7873,22 +7877,22 @@
                         "color": "green"
                       },
                       {
-                        "value": 0.01,
+                        "value": 5,
                         "color": "yellow"
                       },
                       {
-                        "value": 0.05,
+                        "value": 20,
                         "color": "red"
                       }
                     ]
                   },
-                  "unit": "s"
+                  "unit": "percent"
                 },
                 "overrides": []
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -7910,8 +7914,8 @@
         "kind": "Panel",
         "spec": {
           "id": 60,
-          "title": "Requests waiting for a connection",
-          "description": "Average number of requests queued for a Postgres or Redis pool connection. Anything sustained above zero means a pool, or the API holding its connections, is the limit.",
+          "title": "Peak requests waiting for a connection",
+          "description": "Over the selected time range. Average number of requests queued for a Postgres or Redis pool connection. Anything sustained above zero means a pool, or the API holding its connections, is the limit.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7931,10 +7935,11 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9 + sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
+                        "expr": "max_over_time((sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9 + sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))[$__range:$__rate_interval])",
                         "legendFormat": "",
-                        "range": true,
-                        "interval": "5s"
+                        "range": false,
+                        "interval": "5s",
+                        "instant": true
                       }
                     }
                   }
@@ -7976,7 +7981,7 @@
               },
               "options": {
                 "colorMode": "value",
-                "graphMode": "area",
+                "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -8240,8 +8245,8 @@
         "kind": "Panel",
         "spec": {
           "id": 63,
-          "title": "Goroutine wait for CPU",
-          "description": "Go scheduler latency: time between a goroutine becoming ready and it running. A request holding a Postgres or Redis connection also holds it while it waits here. Coarse: one bucket per x8.",
+          "title": "CPU pressure: % of time waiting for CPU",
+          "description": "Share of time the container had work ready but was waiting for CPU (kernel CPU pressure): hitting its CPU limit, or a busy node. From a counter, so short waits count.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8251,7 +8256,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "P50",
+                    "refId": "API",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -8261,10 +8266,10 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.5, sum by (le) (rate(go_sched_latencies_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "p50",
+                        "expr": "100 * sum(rate(container_pressure_cpu_waiting_seconds_total{namespace=\"$Environment\", container=~\"api\"}[$__rate_interval]))",
+                        "legendFormat": "API",
                         "range": true,
-                        "interval": "5s"
+                        "instant": false
                       }
                     }
                   }
@@ -8273,7 +8278,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "P99",
+                    "refId": "PG",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -8283,10 +8288,32 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(go_sched_latencies_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "p99",
+                        "expr": "100 * sum(rate(container_pressure_cpu_waiting_seconds_total{namespace=\"$Environment\", container=~\"postgres\"}[$__rate_interval]))",
+                        "legendFormat": "Postgres",
                         "range": true,
-                        "interval": "5s"
+                        "instant": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "REDIS",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(rate(container_pressure_cpu_waiting_seconds_total{namespace=\"$Environment\", container=~\"redis\"}[$__rate_interval]))",
+                        "legendFormat": "Redis",
+                        "range": true,
+                        "instant": false
                       }
                     }
                   }
@@ -8329,8 +8356,7 @@
                     "lineWidth": 1,
                     "pointSize": 5,
                     "scaleDistribution": {
-                      "type": "log",
-                      "log": 10
+                      "type": "linear"
                     },
                     "showPoints": "auto",
                     "showValues": false,
@@ -8356,7 +8382,8 @@
                       }
                     ]
                   },
-                  "unit": "s"
+                  "unit": "percent",
+                  "min": 0
                 },
                 "overrides": []
               },
@@ -9372,8 +9399,8 @@
         "kind": "Panel",
         "spec": {
           "id": 72,
-          "title": "Goroutine wait for CPU",
-          "description": "Go scheduler latency: time between a goroutine becoming ready and it running. A request holding a Postgres or Redis connection also holds it while it waits here. Coarse: one bucket per x8.",
+          "title": "CPU pressure: % of time waiting for CPU",
+          "description": "Share of time the container had work ready but was waiting for CPU (kernel CPU pressure): hitting its CPU limit, or a busy node. From a counter, so short waits count.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9383,7 +9410,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "P50",
+                    "refId": "A",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -9393,32 +9420,10 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.5, sum by (le) (rate(go_sched_latencies_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "p50",
+                        "expr": "100 * sum(rate(container_pressure_cpu_waiting_seconds_total{namespace=\"$Environment\", container=~\"api\"}[$__rate_interval]))",
+                        "legendFormat": "API",
                         "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "P99",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(go_sched_latencies_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
-                        "legendFormat": "p99",
-                        "range": true,
-                        "interval": "5s"
+                        "instant": false
                       }
                     }
                   }
@@ -9461,8 +9466,7 @@
                     "lineWidth": 1,
                     "pointSize": 5,
                     "scaleDistribution": {
-                      "type": "log",
-                      "log": 10
+                      "type": "linear"
                     },
                     "showPoints": "auto",
                     "showValues": false,
@@ -9488,7 +9492,8 @@
                       }
                     ]
                   },
-                  "unit": "s"
+                  "unit": "percent",
+                  "min": 0
                 },
                 "overrides": []
               },
@@ -9516,7 +9521,7 @@
         "spec": {
           "id": 73,
           "title": "Postgres pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9713,7 +9718,7 @@
         "spec": {
           "id": 74,
           "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9910,7 +9915,7 @@
         "spec": {
           "id": 75,
           "title": "Postgres pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Idle while held: share of the time a connection is held without a query running on it, e.g. while the request waits for CPU. High wait share with low idle: the pool is too small. High idle: the API holds connections it isn't using. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10107,7 +10112,7 @@
         "spec": {
           "id": 76,
           "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10298,6 +10303,127 @@
             "version": "13.2.0"
           }
         }
+      },
+      "panel-77": {
+        "kind": "Panel",
+        "spec": {
+          "id": 77,
+          "title": "New connections per second, gateway \u2192 API",
+          "description": "The gateway talks to the API over HTTP/1.1: one connection per request in flight. A spike means a burst of concurrent requests (e.g. k6 starting many VUs at once), each paying for a new connection through the mesh, and arriving at the API together.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(envoy_cluster_upstream_cx_total{namespace=\"gateway-system\", envoy_cluster_name=~\"kube_$Environment_url-shortener-api_8080\"}[$__rate_interval]))",
+                        "legendFormat": "new connections/s",
+                        "range": true,
+                        "instant": false
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "cps",
+                  "min": 0
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
       }
     },
     "layout": {
@@ -10436,6 +10562,19 @@
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-62"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-77"
                                   }
                                 }
                               }
