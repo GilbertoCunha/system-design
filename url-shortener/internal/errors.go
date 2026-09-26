@@ -52,6 +52,7 @@ func (e *ShortUrlNotFound) Error() string {
 
 func HttpErrorHandler(w http.ResponseWriter, err error, logger *slog.Logger) bool {
 	if _, ok := errors.AsType[*Overloaded](err); ok {
+		logger.Error("overloaded", "error", err.Error())
 		w.Header().Set("Retry-After", "5")
 		w.WriteHeader(503)
 		return true
@@ -59,6 +60,7 @@ func HttpErrorHandler(w http.ResponseWriter, err error, logger *slog.Logger) boo
 		w.WriteHeader(499)
 		return true
 	} else if err != nil {
+		logger.Error("internal server error", "error", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return true
 	}

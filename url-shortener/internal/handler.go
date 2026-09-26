@@ -58,7 +58,7 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 	resp := &ShortUrl{ShortUrl: shortUrl}
 	b, err := json.Marshal(resp)
 	if err != nil {
-		logger.Warn("Internal server error", "err", err)
+		logger.Error("Internal server error", "error", err.Error())
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -66,7 +66,7 @@ func CreateShortUrlHandler(w http.ResponseWriter, r *http.Request, s UrlShortene
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(b)
 	if err != nil {
-		logger.Warn("Internal server error", "err", err)
+		logger.Warn("Internal server error", "error", err.Error())
 		return
 	}
 }
