@@ -6264,7 +6264,7 @@
                                               "kind": "ElementReference",
                                               "name": "panel-3"
                                             },
-                                            "height": 10,
+                                            "height": 8,
                                             "width": 12,
                                             "x": 0,
                                             "y": 0
@@ -6277,7 +6277,7 @@
                                               "kind": "ElementReference",
                                               "name": "panel-4"
                                             },
-                                            "height": 10,
+                                            "height": 8,
                                             "width": 12,
                                             "x": 12,
                                             "y": 0
@@ -6303,7 +6303,7 @@
                                               "kind": "ElementReference",
                                               "name": "panel-5"
                                             },
-                                            "height": 10,
+                                            "height": 8,
                                             "width": 12,
                                             "x": 0,
                                             "y": 0
@@ -6316,7 +6316,7 @@
                                               "kind": "ElementReference",
                                               "name": "panel-6"
                                             },
-                                            "height": 10,
+                                            "height": 8,
                                             "width": 12,
                                             "x": 12,
                                             "y": 0
@@ -6360,7 +6360,7 @@
                                               "kind": "ElementReference",
                                               "name": "panel-1"
                                             },
-                                            "height": 10,
+                                            "height": 8,
                                             "repeat": {
                                               "direction": "h",
                                               "maxPerRow": 2,
