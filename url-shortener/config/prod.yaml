@@ -1,6 +1,6 @@
 ---
 app:
-  log_level: info
+  log_level: error
   port: 8080
   read_header_timeout_seconds: 2
   read_timeout_seconds: 5
@@ -9,7 +9,7 @@ app:
 
 postgres:
   timeouts:
-    acquire_timeout_ms: 100
+    acquire_timeout_ms: 500
     query_timeout_ms: 2000
   # Per API pod. Postgres allows 100 connections (a few reserved)
   pool:
