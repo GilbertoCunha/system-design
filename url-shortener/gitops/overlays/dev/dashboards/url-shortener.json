@@ -124,6 +124,33 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "purple",
+          "legacyOptions": {
+            "tagKeys": "testid",
+            "titleFormat": "Load test",
+            "textFormat": "{{testid}}"
+          },
+          "name": "Load tests",
+          "query": {
+            "datasource": {
+              "name": "PABDA7AB1AD2A1489"
+            },
+            "group": "prometheus",
+            "kind": "DataQuery",
+            "spec": {
+              "expr": "# k6 streams its metrics while a run is going (test:load:*:dev), tagged\n# with the namespace it targets and a test id: one region per run.\nmax by (testid) (k6_vus{namespace=\"$Environment\"})",
+              "interval": "",
+              "refId": "Anno"
+            },
+            "version": "v0"
+          }
+        }
       }
     ],
     "cursorSync": "Crosshair",

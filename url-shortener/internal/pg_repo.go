@@ -74,6 +74,15 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger, reg pr
 			Help: "Total number of short url collisions",
 		}),
 	}
+	// Every series at zero before traffic: see Metrics.Initialize
+	for _, outcome := range queryOutcomes {
+		for _, query := range []string{"get_long_url", "put_short_url"} {
+			metrics.pgQueryDurationSeconds.WithLabelValues(query, outcome)
+		}
+		if outcome != "not_found" {
+			metrics.pgPoolAcquireDurationSeconds.WithLabelValues(outcome)
+		}
+	}
 	repo := &PgUrlRepo{pool: pool, logger: logger, config: c, metrics: metrics}
 
 	return repo, nil
@@ -168,6 +177,9 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 
 	return nil
 }
+
+// Every value queryOutcome returns
+var queryOutcomes = []string{"ok", "not_found", "timeout", "canceled", "error"}
 
 func queryOutcome(err error) string {
 	switch {

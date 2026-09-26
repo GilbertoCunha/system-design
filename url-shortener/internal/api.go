@@ -96,6 +96,17 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 		CreateShortUrlHandler(w, r, urlShortener, logger)
 	})
 
+	// Every status each handler above can answer with; keep in step with the
+	// handlers. Their metric series start at zero instead of appearing with
+	// their first request.
+	metrics.Initialize(map[string][]int{
+		"/metrics":           {http.StatusOK},
+		"GET /{$}":           {http.StatusOK},
+		"GET /healthz":       {http.StatusOK},
+		"GET /v1/url/{code}": {http.StatusFound, http.StatusBadRequest, http.StatusNotFound, 499, http.StatusInternalServerError, http.StatusServiceUnavailable},
+		"POST /v1/url":       {http.StatusCreated, http.StatusBadRequest, 499, http.StatusInternalServerError, http.StatusServiceUnavailable},
+	})
+
 	// Server definition
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.App.Port),

@@ -52,6 +52,12 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registere
 			[]string{"query", "outcome"},
 		),
 	}
+	// Every series at zero before traffic: see Metrics.Initialize
+	for _, outcome := range redisQueryOutcomes {
+		for _, query := range []string{"get_long_url", "put_short_url"} {
+			metrics.redisQueryDurationSeconds.WithLabelValues(query, outcome)
+		}
+	}
 
 	return &RedisUrlRepo{
 		client:  client,
@@ -126,6 +132,9 @@ func (r *RedisUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl
 
 	return err
 }
+
+// Every value redisQueryOutcome returns
+var redisQueryOutcomes = []string{"ok", "timeout", "not_found", "canceled", "error"}
 
 func redisQueryOutcome(err error) string {
 	switch {

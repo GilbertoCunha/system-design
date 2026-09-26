@@ -3,6 +3,7 @@ package internal
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -44,6 +45,30 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		},
 			[]string{"status", "method", "route"},
 		),
+	}
+}
+
+// Initialize creates the series for every route and status the API expects,
+// at zero, before any traffic arrives. Series are otherwise created by their
+// first request, and the first scrape of a new series already holds whatever
+// happened until then: rate() takes that sample as its starting point, so a
+// burst right after a deploy never shows up in rates or quantiles. (A load
+// test's slowest first 15 seconds read as p99 23ms, not 381ms.)
+//
+// routes maps a mux pattern to the statuses its handler can answer with. The
+// method is the pattern's own, or GET for patterns without one.
+func (m *Metrics) Initialize(routes map[string][]int) {
+	for route, statuses := range routes {
+		method := "GET"
+		if before, _, ok := strings.Cut(route, " "); ok {
+			method = before
+		}
+		m.httpActiveRequests.WithLabelValues(method, route)
+		for _, code := range statuses {
+			status := strconv.Itoa(code)
+			m.httpRequestsTotal.WithLabelValues(status, method, route)
+			m.httpRequestDurationSeconds.WithLabelValues(status, method, route)
+		}
 	}
 }
 

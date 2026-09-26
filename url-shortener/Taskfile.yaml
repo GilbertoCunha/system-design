@@ -73,10 +73,18 @@ tasks:
     cmds:
       - k6 run test/load/$FILE.js
 
+  # Also reports the run to VictoriaMetrics (k6's metrics, tagged with the
+  # environment's namespace and a test id), which the dashboard's "Load tests"
+  # annotation marks each run with. Local runs report nowhere.
   test:load:*:dev:
     env:
       FILE: "{{index .MATCH 0}}"
     cmds:
       - |
+        K6_PROMETHEUS_RW_SERVER_URL=https://victoria-metrics.k8s.homelab.grncunha.com/api/v1/write \
+        K6_PROMETHEUS_RW_TREND_STATS="p(50),p(90),p(99),max" \
         BASE_URL=https://url-shortener.dev.k8s.homelab.grncunha.com \
-        k6 run test/load/$FILE.js
+        k6 run -o experimental-prometheus-rw \
+          --tag namespace=project-url-shortener-dev \
+          --tag testid=$FILE-$(date -u +%Y%m%dT%H%M%SZ) \
+          test/load/$FILE.js
