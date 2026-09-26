@@ -9,3 +9,21 @@ patches:
   - path: api.yaml
   - path: cache.yaml
   - path: database.yaml
+
+# The Grafana dashboard. Grafana's sidecar loads any ConfigMap labelled
+# `grafana_dashboard`, from any namespace. It lives in this overlay only:
+# the dashboard covers both environments through its `env` variable, and a
+# copy in each overlay would give Grafana two files with the same uid.
+#
+# It is provisioned, so it can't be saved from the UI. Edit it there, export
+# it (v2 resource), and commit the JSON here.
+configMapGenerator:
+  - name: url-shortener-dashboard
+    files:
+      - dashboards/url-shortener.json
+    options:
+      # A new name on every change would have the sidecar create the new file
+      # and then delete the old one, which has the same file name.
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
