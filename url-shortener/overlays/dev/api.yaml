@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-9e3ebb5e2445887fbf3e2a1ebf2ac731fc81f6ac
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-8254f64497ba423eab3db2f43ed8d9acceb23ee9
           command:
             - /bin/url_shortener
             - --environment
