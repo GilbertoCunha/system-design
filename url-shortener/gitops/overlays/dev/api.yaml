@@ -20,6 +20,16 @@ spec:
             capabilities:
               drop: ["ALL"]
           env:
+            # Go never picks fewer than 2 threads on its own, and 2 threads
+            # can spend a 500m quota in half of each 100ms period, then get
+            # paused for the rest. Taken from the limit (rounded up to whole
+            # CPUs), so it follows any change to it.
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: api
+                  resource: limits.cpu
+                  divisor: "1"
             - name: REDIS_URI
               value: redis://url-shortener-cache:6379
             - name: POSTGRES_URI
