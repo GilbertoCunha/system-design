@@ -13,12 +13,12 @@ postgres:
     query_timeout_ms: 2000
   # Per API pod. Postgres allows 100 connections (a few reserved)
   pool:
-    min_conns: 10
-    max_conns: 40
+    min_conns: 40
+    max_conns: 80
 
 redis:
   timeouts:
     query_timeout_ms: 500
   # Per API pod
   pool:
-    size: 50
+    size: 100
