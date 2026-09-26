@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-c1b9c2146f81e6ed6890d87e4c32c90e94fda9be
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-158d5872e5d8f76512c564d1a896559d1eb5c845
           command:
             - /bin/url_shortener
             - --environment
@@ -43,7 +43,7 @@ spec:
               cpu: 500m
               memory: 100Mi
             limits:
-              cpu: 1
+              cpu: 2
               memory: 200Mi
           # Define readiness and liveness conditions
           # using probes
