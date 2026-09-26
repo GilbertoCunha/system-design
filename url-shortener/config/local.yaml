@@ -19,3 +19,5 @@ postgres:
 redis:
   timeouts:
     query_timeout_ms: 500
+  pool:
+    size: 50

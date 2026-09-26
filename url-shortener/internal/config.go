@@ -36,6 +36,10 @@ type AppConfig struct {
 		Timeouts struct {
 			QueryTimeoutMs int `mapstructure:"query_timeout_ms"`
 		} `mapstructure:"timeouts"`
+
+		Pool struct {
+			Size int `mapstructure:"size"`
+		} `mapstructure:"pool"`
 	} `mapstructure:"redis"`
 }
 

@@ -29,6 +29,7 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registere
 		return nil, err
 	}
 	opts.ContextTimeoutEnabled = true
+	opts.PoolSize = c.Redis.Pool.Size
 
 	// Redis pool metrics
 	client := redis.NewClient(opts)
