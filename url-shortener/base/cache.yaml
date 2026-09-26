@@ -24,6 +24,8 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9121"
         prometheus.io/path: /metrics
+        # See api.yaml
+        prometheus.io/interval: 5s
     spec:
       securityContext:
         runAsNonRoot: true

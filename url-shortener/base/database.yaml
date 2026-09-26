@@ -25,6 +25,9 @@ spec:
       prometheus.io/scrape: "true"
       prometheus.io/port: "9187"
       prometheus.io/path: /metrics
+      # See api.yaml. CNPG copies these onto its Services as well, but only
+      # the pod scrape honours the interval.
+      prometheus.io/interval: 5s
 
   instances: 1
 

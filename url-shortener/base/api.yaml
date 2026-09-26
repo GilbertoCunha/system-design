@@ -21,6 +21,9 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: /metrics
+        # 5s instead of the cluster's 15s: the dashboard's rate windows
+        # shrink from 1m to 20s, so its graphs lag ~10s instead of ~30s.
+        prometheus.io/interval: 5s
     spec:
       topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname
