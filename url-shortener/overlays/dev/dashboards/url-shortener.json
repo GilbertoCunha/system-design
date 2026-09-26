@@ -6170,7 +6170,7 @@
         "spec": {
           "id": 47,
           "title": "Requests per second: k6 sent vs. API handled",
-          "description": "A gap between the two lines is requests lost or still in flight between k6 and the API: network, gateway, or connections that never opened.",
+          "description": "A gap between the two lines is requests lost or still in flight between k6 and the API: network, gateway, or connections that never opened. k6 lines are increase()/window, not rate(): k6's series start and stop mid-test (one per phase), which rate() counts twice while they overlap.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6190,7 +6190,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(k6_http_reqs_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval]))",
+                        "expr": "sum(increase(k6_http_reqs_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval])) / ($__rate_interval_ms / 1000)",
                         "legendFormat": "k6 sent",
                         "range": true,
                         "interval": "5s"
@@ -6313,7 +6313,7 @@
         "spec": {
           "id": 48,
           "title": "Failures: k6 vs. API",
-          "description": "k6 counts a request as failed on an unexpected status or a transport error (dial timeouts, resets), which the API never sees. Dropped iterations: k6 had no free VU to start one on time, so the target rate was not reached.",
+          "description": "k6 counts a request as failed on an unexpected status or a transport error (dial timeouts, resets), which the API never sees. Dropped iterations: k6 had no free VU to start one on time, so the target rate was not reached. k6 lines are increase()/window, not rate(): k6's series start and stop mid-test (one per phase), which rate() counts twice while they overlap.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6333,7 +6333,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(k6_http_reqs_total{namespace=\"$Environment\", testid=~\"$LoadTest\", expected_response=\"false\"}[$__rate_interval]))",
+                        "expr": "sum(increase(k6_http_reqs_total{namespace=\"$Environment\", testid=~\"$LoadTest\", expected_response=\"false\"}[$__rate_interval])) / ($__rate_interval_ms / 1000)",
                         "legendFormat": "k6 failed requests",
                         "range": true,
                         "interval": "5s"
@@ -6377,7 +6377,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(k6_dropped_iterations_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval]))",
+                        "expr": "sum(increase(k6_dropped_iterations_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval])) / ($__rate_interval_ms / 1000)",
                         "legendFormat": "k6 dropped iterations",
                         "range": true,
                         "interval": "5s"
@@ -6621,7 +6621,7 @@
         "spec": {
           "id": 50,
           "title": "Data sent and received by k6",
-          "description": "",
+          "description": "k6 lines are increase()/window, not rate(): k6's series start and stop mid-test (one per phase), which rate() counts twice while they overlap.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6641,7 +6641,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(k6_data_sent_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval]))",
+                        "expr": "sum(increase(k6_data_sent_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval])) / ($__rate_interval_ms / 1000)",
                         "legendFormat": "sent",
                         "range": true,
                         "interval": "5s"
@@ -6663,7 +6663,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(k6_data_received_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval]))",
+                        "expr": "sum(increase(k6_data_received_total{namespace=\"$Environment\", testid=~\"$LoadTest\"}[$__rate_interval])) / ($__rate_interval_ms / 1000)",
                         "legendFormat": "received",
                         "range": true,
                         "interval": "5s"
@@ -6763,8 +6763,8 @@
         "kind": "Panel",
         "spec": {
           "id": 51,
-          "title": "k6 p99 per test (steady phase)",
-          "description": "Latency as k6 measured it, from the laptop: network and gateway included. Cumulative over the whole steady phase, so it matches the p99 in k6's end-of-test summary.",
+          "title": "k6 p99 per test (successful requests, steady phase)",
+          "description": "Latency of successful requests as k6 measured it, from the laptop: network and gateway included. Cumulative over the steady phase, so it matches k6's end-of-test http_req_duration{ expected_response:true }. Failed requests (timeouts, 5xx) are in \"Failures: k6 vs. API\".",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6784,7 +6784,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (testid, method) (last_over_time(k6_http_req_duration_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"}[$__range]))",
+                        "expr": "max by (testid, method) (last_over_time(k6_http_req_duration_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"}[$__range]))",
                         "legendFormat": "{{testid}} {{method}}",
                         "instant": true,
                         "range": false
@@ -6924,7 +6924,7 @@
         "spec": {
           "id": 53,
           "title": "Where k6's request time goes (p99, cumulative)",
-          "description": "Blocked: waiting for a free connection in k6. Connecting / TLS: opening one. Sending and receiving: the bytes. Waiting: from the request sent to the first byte back, i.e. network round trip plus everything on the server.",
+          "description": "Blocked: waiting for a free connection in k6. Connecting / TLS: opening one. Sending and receiving: the bytes. Waiting: from the request sent to the first byte back, i.e. network round trip plus everything on the server. Successful requests only, per method.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6944,8 +6944,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_blocked_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "blocked",
+                        "expr": "max by (method) (k6_http_req_blocked_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "blocked {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -6966,8 +6966,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_connecting_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "connecting",
+                        "expr": "max by (method) (k6_http_req_connecting_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "connecting {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -6988,8 +6988,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_tls_handshaking_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "TLS handshake",
+                        "expr": "max by (method) (k6_http_req_tls_handshaking_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "TLS handshake {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -7010,8 +7010,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_sending_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "sending",
+                        "expr": "max by (method) (k6_http_req_sending_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "sending {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -7032,8 +7032,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_waiting_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "waiting (server + network)",
+                        "expr": "max by (method) (k6_http_req_waiting_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "waiting (server + network) {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -7054,8 +7054,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(k6_http_req_receiving_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "receiving",
+                        "expr": "max by (method) (k6_http_req_receiving_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "receiving {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -7155,7 +7155,7 @@
         "spec": {
           "id": 54,
           "title": "k6 latency since the test started",
-          "description": "Cumulative since the start of each test: the line settles on the test's final value rather than following the current latency. Use the API panels for latency over time.",
+          "description": "Cumulative since the start of each test: the line settles on the test's final value rather than following the current latency. Use the API panels for latency over time. Successful requests only.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7175,8 +7175,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (testid) (k6_http_req_duration_p50{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "p50 {{testid}}",
+                        "expr": "max by (testid, method) (k6_http_req_duration_p50{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "p50 {{testid}} {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
@@ -7197,8 +7197,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (testid) (k6_http_req_duration_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\"})",
-                        "legendFormat": "p99 {{testid}}",
+                        "expr": "max by (testid, method) (k6_http_req_duration_p99{namespace=\"$Environment\", testid=~\"$LoadTest\", phase=\"steady\", expected_response=\"true\"})",
+                        "legendFormat": "p99 {{testid}} {{method}}",
                         "range": true,
                         "interval": "5s"
                       }
