@@ -3,7 +3,7 @@ import { rampAndHold, tagPhase } from "./rampAndHold.js";
 
 // Ramp up to 1000 iterations/s (2k req/s: a create and a visit each), then
 // hold it. The target is 10k iterations/s (20k req/s).
-const load = rampAndHold({ rate: 1000, preAllocatedVUs: 1000, maxVUs: 8000 });
+const load = rampAndHold({ rate: 5000, preAllocatedVUs: 1000, maxVUs: 8000 });
 
 // Test configuration
 export const options = {
