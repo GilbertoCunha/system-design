@@ -4,19 +4,19 @@ kind: Deployment
 metadata:
   name: url-shortener-api
   labels:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: url-shortener
-      role: api
+      grncunha.com/project: url-shortener
+      grncunha.com/service: api
   template:
     metadata:
       labels:
-        app: url-shortener
-        role: api
+        grncunha.com/project: url-shortener
+        grncunha.com/service: api
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
@@ -38,13 +38,13 @@ kind: Service
 metadata:
   name: url-shortener-api
   labels:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
 spec:
   type: ClusterIP
   selector:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
   ports:
     - name: 8080-8080
       port: 8080
@@ -56,7 +56,7 @@ kind: HTTPRoute
 metadata:
   name: url-shortener
   labels:
-    app: url-shortener
+    grncunha.com/project: url-shortener
 spec:
   parentRefs:
     - name: gw-internal-dev
