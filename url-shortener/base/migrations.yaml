@@ -7,7 +7,7 @@ metadata:
   # diff validates changes with a dry-run apply, so an in-place edit fails at
   # comparison time and wedges the whole Application. A fresh name diffs cleanly
   # the previous run is pruned.
-  name: migrations-58a00fab1fea573cd2364362bac41a0aaa95118a
+  name: migrations-25ce5b72edc9b3a726b0643217181e7e3ea623d0
   annotations:
     # Between the database (-2) and the backend (0). A Job only reports healthy
     # once it succeeds, and Argo waits for a wave to be healthy before applying
@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: goose
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-58a00fab1fea573cd2364362bac41a0aaa95118a
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-25ce5b72edc9b3a726b0643217181e7e3ea623d0
           # Prevent privilege escalation
           securityContext:
             allowPrivilegeEscalation: false
