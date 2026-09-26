@@ -38,6 +38,17 @@ spec:
       containers:
         - name: redis
           image: redis:8.10
+          # Keys are written without a TTL, so without a cap Redis grows until
+          # the container is OOM-killed at its limit. Capped at 75% of the
+          # limit, leaving room for Redis' own overhead and fragmentation, it
+          # evicts the least recently used keys instead: a miss is only a
+          # slower Postgres lookup, a kill empties the whole cache.
+          args:
+            - redis-server
+            - --maxmemory
+            - 768mb
+            - --maxmemory-policy
+            - allkeys-lru
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -49,7 +60,7 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 500m
+              memory: 500Mi
             limits:
               cpu: 500m
               memory: 1Gi
