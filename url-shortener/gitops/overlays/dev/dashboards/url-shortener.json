@@ -2,78 +2,97 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adxhqbj"
+    "name": "adxhqbj",
+    "namespace": "default",
+    "uid": "6267078a-ac09-4077-a905-dac9e61b0c01",
+    "resourceVersion": "1790428405874996",
+    "generation": 11,
+    "creationTimestamp": "2026-09-25T21:14:30Z",
+    "labels": {
+      "grafana.app/deprecatedInternalID": "412986733846528"
+    },
+    "annotations": {
+      "grafana.app/createdBy": "user:bfwjhqe6qcd8gd",
+      "grafana.app/managedBy": "classic-file-provisioning",
+      "grafana.app/managerId": "sidecarProvider",
+      "grafana.app/sourceChecksum": "ac60223621ff4141f454eb339d90d0e3",
+      "grafana.app/sourcePath": "/tmp/dashboards/url-shortener.json",
+      "grafana.app/sourceTimestamp": "1790428405000",
+      "grafana.app/updatedBy": "access-policy:service",
+      "grafana.app/updatedTimestamp": "2026-09-26T13:13:25Z",
+      "grafana.app/folder": ""
+    }
   },
   "spec": {
     "annotations": [
       {
         "kind": "AnnotationQuery",
         "spec": {
-          "query": {
-            "kind": "DataQuery",
-            "group": "grafana",
-            "version": "v0",
-            "datasource": {
-              "name": "-- Grafana --"
-            },
-            "spec": {}
-          },
+          "builtIn": true,
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
           "name": "Annotations & Alerts",
-          "builtIn": true
-        }
-      },
-      {
-        "kind": "AnnotationQuery",
-        "spec": {
           "query": {
-            "kind": "DataQuery",
-            "group": "prometheus",
-            "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "-- Grafana --"
             },
-            "spec": {
-              "expr": "increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\"}[1m]) > 0\n  and on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
-              "interval": "",
-              "refId": "Anno"
-            }
-          },
-          "enable": true,
-          "hide": false,
-          "iconColor": "red",
-          "name": "OOM Kills",
-          "legacyOptions": {
-            "tagKeys": "oom",
-            "titleFormat": "OOM Kills"
+            "group": "grafana",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
           }
         }
       },
       {
         "kind": "AnnotationQuery",
         "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "red",
+          "legacyOptions": {
+            "tagKeys": "oom",
+            "titleFormat": "OOM Kills"
+          },
+          "name": "OOM Kills",
           "query": {
-            "kind": "DataQuery",
-            "group": "prometheus",
-            "version": "v0",
             "datasource": {
               "name": "PABDA7AB1AD2A1489"
             },
+            "group": "prometheus",
+            "kind": "DataQuery",
+            "spec": {
+              "expr": "increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\"}[1m]) > 0\n  and on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
+              "interval": "",
+              "refId": "Anno"
+            },
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "dark-orange",
+          "legacyOptions": {
+            "tagKeys": "restart",
+            "titleFormat": "Restarts"
+          },
+          "name": "Restarts",
+          "query": {
+            "datasource": {
+              "name": "PABDA7AB1AD2A1489"
+            },
+            "group": "prometheus",
+            "kind": "DataQuery",
             "spec": {
               "expr": "increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\"}[1m]) > 0\n  unless on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
               "interval": "",
               "refId": "Anno"
-            }
-          },
-          "enable": true,
-          "hide": false,
-          "iconColor": "dark-orange",
-          "name": "Restarts",
-          "legacyOptions": {
-            "tagKeys": "restart",
-            "titleFormat": "Restarts"
+            },
+            "version": "v0"
           }
         }
       }
@@ -84,10 +103,6 @@
       "panel-1": {
         "kind": "Panel",
         "spec": {
-          "id": 1,
-          "title": "p$Latency response time",
-          "description": "",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -95,62 +110,39 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "expr": "histogram_quantile(${Latency:raw}, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__rate_interval])))",
                         "legendFormat": "p${Latency}",
                         "range": true
-                      }
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "",
+          "id": 1,
+          "links": [],
+          "title": "p$Latency response time",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -188,21 +180,44 @@
                       "mode": "off"
                     }
                   },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
                   "unit": "s"
                 },
                 "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "right",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       },
       "panel-10": {
         "kind": "Panel",
         "spec": {
-          "id": 10,
-          "title": "CPU Throttling",
-          "description": "",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -210,13 +225,13 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
@@ -224,51 +239,27 @@
                         "instant": false,
                         "legendFormat": "{{pod}}",
                         "range": true
-                      }
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "",
+          "id": 10,
+          "links": [],
+          "title": "CPU Throttling",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
               "fieldConfig": {
                 "defaults": {
-                  "unit": "percent",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -306,127 +297,29 @@
                       "mode": "off"
                     }
                   },
+                  "max": 100,
                   "min": 0,
-                  "max": 100
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "percent"
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-11": {
-        "kind": "Panel",
-        "spec": {
-          "id": 11,
-          "title": "Memory Usage",
-          "description": "Memory usage in Mebibytes",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$Environment\", pod=~\"url-shortener-api-.*\", container=\"api\"})",
-                        "legendFormat": "Working set {{pod}}",
-                        "range": true
-                      }
-                    },
-                    "refId": "Memory usage",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "max(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"memory\"})",
-                        "instant": false,
-                        "legendFormat": "Limits",
-                        "range": true
-                      }
-                    },
-                    "refId": "Memory Limits",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "max(kube_pod_container_resource_requests{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"memory\"})",
-                        "instant": false,
-                        "legendFormat": "Requests",
-                        "range": true
-                      }
-                    },
-                    "refId": "Memory Requests",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "sum by (pod) (go_memstats_heap_inuse_bytes{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
-                        "legendFormat": "Go heap {{pod}}",
-                        "range": true
-                      }
-                    },
-                    "refId": "Go Heap",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.2.0",
-            "spec": {
+              },
               "options": {
                 "legend": {
                   "calcs": [],
                   "displayMode": "list",
-                  "enableFacetedFilter": false,
                   "placement": "right",
                   "showLegend": true
                 },
@@ -435,22 +328,120 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$Environment\", pod=~\"url-shortener-api-.*\", container=\"api\"})",
+                        "legendFormat": "Working set {{pod}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Memory usage"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "max(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"memory\"})",
+                        "instant": false,
+                        "legendFormat": "Limits",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Memory Limits"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "max(kube_pod_container_resource_requests{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"memory\"})",
+                        "instant": false,
+                        "legendFormat": "Requests",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Memory Requests"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "sum by (pod) (go_memstats_heap_inuse_bytes{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "legendFormat": "Go heap {{pod}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Go Heap"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Memory usage in Mebibytes",
+          "id": 11,
+          "links": [],
+          "title": "Memory Usage",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -491,60 +482,28 @@
                       "mode": "off"
                     }
                   },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
                   "unit": "bytes"
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-12": {
-        "kind": "Panel",
-        "spec": {
-          "id": 12,
-          "title": "Go Routines Count",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "go_goroutines{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}",
-                        "legendFormat": "{{pod}}",
-                        "range": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.2.0",
-            "spec": {
+              },
               "options": {
                 "legend": {
                   "calcs": [],
                   "displayMode": "list",
+                  "enableFacetedFilter": false,
                   "placement": "right",
                   "showLegend": true
                 },
@@ -553,22 +512,55 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-12": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "go_goroutines{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}",
+                        "legendFormat": "{{pod}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 12,
+          "links": [],
+          "title": "Go Routines Count",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -605,56 +597,23 @@
                     "thresholdsStyle": {
                       "mode": "off"
                     }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
                   }
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-13": {
-        "kind": "Panel",
-        "spec": {
-          "id": 13,
-          "title": "Go GC pause time",
-          "description": "Share of wall time the Go runtime was paused for GC (stop-the-world only; concurrent GC work is not included).",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "rate(go_gc_duration_seconds_sum{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]) * 100",
-                        "legendFormat": "{{pod}}",
-                        "range": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.2.0",
-            "spec": {
+              },
               "options": {
                 "legend": {
                   "calcs": [],
@@ -667,23 +626,55 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-13": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "rate(go_gc_duration_seconds_sum{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]) * 100",
+                        "legendFormat": "{{pod}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Share of wall time the Go runtime was paused for GC (stop-the-world only; concurrent GC work is not included).",
+          "id": 13,
+          "links": [],
+          "title": "Go GC pause time",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
               "fieldConfig": {
                 "defaults": {
-                  "unit": "percent",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -720,142 +711,24 @@
                     "thresholdsStyle": {
                       "mode": "off"
                     }
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-3": {
-        "kind": "Panel",
-        "spec": {
-          "id": 3,
-          "title": "Error Percentage",
-          "description": "Share of requests that returned 5xx over the selected time range.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__range]))",
-                        "legendFormat": "Error %",
-                        "range": false,
-                        "instant": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "stat",
-            "version": "13.2.0",
-            "spec": {
-              "options": {
-                "colorMode": "background",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "auto",
-                "wideLayout": true
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "percent",
+                  },
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
-                        "value": 0,
-                        "color": "green"
+                        "color": "green",
+                        "value": 0
                       },
                       {
-                        "value": 5,
-                        "color": "red"
+                        "color": "red",
+                        "value": 80
                       }
                     ]
                   },
-                  "color": {
-                    "mode": "thresholds"
-                  }
+                  "unit": "percent"
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-4": {
-        "kind": "Panel",
-        "spec": {
-          "id": 4,
-          "title": "Errors per second",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__rate_interval])) or vector(0)",
-                        "legendFormat": "Errors/s",
-                        "range": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.2.0",
-            "spec": {
+              },
               "options": {
                 "legend": {
                   "calcs": [],
@@ -868,22 +741,139 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__range]))",
+                        "instant": true,
+                        "legendFormat": "Error %",
+                        "range": false
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Share of requests that returned 5xx over the selected time range.",
+          "id": 3,
+          "links": [],
+          "title": "Error Percentage",
+          "vizConfig": {
+            "group": "stat",
+            "kind": "VizConfig",
+            "spec": {
               "fieldConfig": {
                 "defaults": {
+                  "color": {
+                    "mode": "thresholds"
+                  },
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
-                        "value": 0,
-                        "color": "green"
+                        "color": "green",
+                        "value": 0
                       },
                       {
-                        "value": 5,
-                        "color": "red"
+                        "color": "red",
+                        "value": 5
                       }
                     ]
                   },
+                  "unit": "percent"
+                },
+                "overrides": []
+              },
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": ["lastNotNull"],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "legendFormat": "Error rate",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 4,
+          "links": [],
+          "title": "Error rate over time",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -921,21 +911,44 @@
                       "mode": "off"
                     }
                   },
-                  "unit": "reqps"
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 5
+                      }
+                    ]
+                  },
+                  "unit": "percent"
                 },
                 "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "right",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       },
       "panel-5": {
         "kind": "Panel",
         "spec": {
-          "id": 5,
-          "title": "Error Percentage",
-          "description": "Share of requests that returned 5xx over the selected time range.",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -943,35 +956,60 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__range]))",
+                        "instant": true,
                         "legendFormat": "Error %",
-                        "range": false,
-                        "instant": true
-                      }
+                        "range": false
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "Share of requests that returned 5xx over the selected time range.",
+          "id": 5,
+          "links": [],
+          "title": "Error Percentage",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "stat",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 5
+                      }
+                    ]
+                  },
+                  "unit": "percent"
+                },
+                "overrides": []
+              },
               "options": {
                 "colorMode": "background",
                 "graphMode": "none",
@@ -979,49 +1017,22 @@
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
                 "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
+                  "calcs": ["lastNotNull"],
                   "fields": "",
                   "values": false
                 },
                 "showPercentChange": false,
                 "textMode": "auto",
                 "wideLayout": true
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "unit": "percent",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 5,
-                        "color": "red"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "thresholds"
-                  }
-                },
-                "overrides": []
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       },
       "panel-6": {
         "kind": "Panel",
         "spec": {
-          "id": 6,
-          "title": "Errors per second",
-          "description": "",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -1029,34 +1040,93 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__rate_interval])) or vector(0)",
                         "legendFormat": "Errors/s",
                         "range": true
-                      }
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "",
+          "id": 6,
+          "links": [],
+          "title": "Errors per second",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 5
+                      }
+                    ]
+                  },
+                  "unit": "reqps"
+                },
+                "overrides": []
+              },
               "options": {
                 "legend": {
                   "calcs": [],
@@ -1069,74 +1139,15 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 5,
-                        "color": "red"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "unit": "reqps"
-                },
-                "overrides": []
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       },
       "panel-7": {
         "kind": "Panel",
         "spec": {
-          "id": 7,
-          "title": "Requests per second Global",
-          "description": "",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -1144,62 +1155,39 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
                         "legendFormat": "RPS",
                         "range": true
-                      }
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "",
+          "id": 7,
+          "links": [],
+          "title": "Requests per second Global",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -1237,21 +1225,44 @@
                       "mode": "off"
                     }
                   },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
                   "unit": "reqps"
                 },
                 "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "right",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       },
       "panel-8": {
         "kind": "Panel",
         "spec": {
-          "id": 8,
-          "title": "Requests per second $Route",
-          "description": "",
-          "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
@@ -1259,62 +1270,39 @@
                 {
                   "kind": "PanelQuery",
                   "spec": {
+                    "hidden": false,
                     "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
                       "datasource": {
                         "name": "PABDA7AB1AD2A1489"
                       },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__rate_interval]))",
                         "legendFormat": "RPS",
                         "range": true
-                      }
+                      },
+                      "version": "v0"
                     },
-                    "refId": "A",
-                    "hidden": false
+                    "refId": "A"
                   }
                 }
               ],
-              "transformations": [],
-              "queryOptions": {}
+              "queryOptions": {},
+              "transformations": []
             }
           },
+          "description": "",
+          "id": 8,
+          "links": [],
+          "title": "Requests per second $Route",
           "vizConfig": {
-            "kind": "VizConfig",
             "group": "timeseries",
-            "version": "13.2.0",
+            "kind": "VizConfig",
             "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "right",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -1352,105 +1340,27 @@
                       "mode": "off"
                     }
                   },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
                   "unit": "reqps"
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-9": {
-        "kind": "Panel",
-        "spec": {
-          "id": 9,
-          "title": "CPU Usage",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{namespace=\"$Environment\", pod=~\"url-shortener-api-.*\", container=\"api\"}[$__rate_interval]))",
-                        "legendFormat": "{{pod}}",
-                        "range": true
-                      }
-                    },
-                    "refId": "CPU usage",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "max(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"cpu\"})",
-                        "instant": false,
-                        "legendFormat": "Limits",
-                        "range": true
-                      }
-                    },
-                    "refId": "CPU Limits",
-                    "hidden": false
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "builder",
-                        "expr": "max(kube_pod_container_resource_requests{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"cpu\"})",
-                        "instant": false,
-                        "legendFormat": "Requests",
-                        "range": true
-                      }
-                    },
-                    "refId": "CPU Requests",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.2.0",
-            "spec": {
+              },
               "options": {
                 "legend": {
                   "calcs": [],
                   "displayMode": "list",
-                  "enableFacetedFilter": false,
                   "placement": "right",
                   "showLegend": true
                 },
@@ -1459,22 +1369,99 @@
                   "mode": "single",
                   "sort": "none"
                 }
-              },
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-9": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{namespace=\"$Environment\", pod=~\"url-shortener-api-.*\", container=\"api\"}[$__rate_interval]))",
+                        "legendFormat": "{{pod}}",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "CPU usage"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "max(kube_pod_container_resource_limits{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"cpu\"})",
+                        "instant": false,
+                        "legendFormat": "Limits",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "CPU Limits"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "max(kube_pod_container_resource_requests{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\", container=\"api\", resource=\"cpu\"})",
+                        "instant": false,
+                        "legendFormat": "Requests",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "CPU Requests"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 9,
+          "links": [],
+          "title": "CPU Usage",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
               "fieldConfig": {
                 "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 80,
-                        "color": "red"
-                      }
-                    ]
-                  },
                   "color": {
                     "mode": "palette-classic"
                   },
@@ -1514,11 +1501,39 @@
                     "thresholdsStyle": {
                       "mode": "off"
                     }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
                   }
                 },
                 "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "right",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
               }
-            }
+            },
+            "version": "13.2.0"
           }
         }
       }
@@ -1530,7 +1545,6 @@
           {
             "kind": "TabsLayoutTab",
             "spec": {
-              "title": "API",
               "layout": {
                 "kind": "RowsLayout",
                 "spec": {
@@ -1538,7 +1552,6 @@
                     {
                       "kind": "RowsLayoutRow",
                       "spec": {
-                        "title": "Error Rates",
                         "collapse": false,
                         "layout": {
                           "kind": "TabsLayout",
@@ -1547,7 +1560,6 @@
                               {
                                 "kind": "TabsLayoutTab",
                                 "spec": {
-                                  "title": "Global",
                                   "layout": {
                                     "kind": "GridLayout",
                                     "spec": {
@@ -1555,38 +1567,38 @@
                                         {
                                           "kind": "GridLayoutItem",
                                           "spec": {
-                                            "x": 0,
-                                            "y": 0,
-                                            "width": 12,
-                                            "height": 10,
                                             "element": {
                                               "kind": "ElementReference",
                                               "name": "panel-3"
-                                            }
+                                            },
+                                            "height": 10,
+                                            "width": 12,
+                                            "x": 0,
+                                            "y": 0
                                           }
                                         },
                                         {
                                           "kind": "GridLayoutItem",
                                           "spec": {
-                                            "x": 12,
-                                            "y": 0,
-                                            "width": 12,
-                                            "height": 10,
                                             "element": {
                                               "kind": "ElementReference",
                                               "name": "panel-4"
-                                            }
+                                            },
+                                            "height": 10,
+                                            "width": 12,
+                                            "x": 12,
+                                            "y": 0
                                           }
                                         }
                                       ]
                                     }
-                                  }
+                                  },
+                                  "title": "Global"
                                 }
                               },
                               {
                                 "kind": "TabsLayoutTab",
                                 "spec": {
-                                  "title": "$Route",
                                   "layout": {
                                     "kind": "GridLayout",
                                     "spec": {
@@ -1594,27 +1606,27 @@
                                         {
                                           "kind": "GridLayoutItem",
                                           "spec": {
-                                            "x": 0,
-                                            "y": 0,
-                                            "width": 12,
-                                            "height": 10,
                                             "element": {
                                               "kind": "ElementReference",
                                               "name": "panel-5"
-                                            }
+                                            },
+                                            "height": 10,
+                                            "width": 12,
+                                            "x": 0,
+                                            "y": 0
                                           }
                                         },
                                         {
                                           "kind": "GridLayoutItem",
                                           "spec": {
-                                            "x": 12,
-                                            "y": 0,
-                                            "width": 12,
-                                            "height": 10,
                                             "element": {
                                               "kind": "ElementReference",
                                               "name": "panel-6"
-                                            }
+                                            },
+                                            "height": 10,
+                                            "width": 12,
+                                            "x": 12,
+                                            "y": 0
                                           }
                                         }
                                       ]
@@ -1623,18 +1635,19 @@
                                   "repeat": {
                                     "mode": "variable",
                                     "value": "Route"
-                                  }
+                                  },
+                                  "title": "$Route"
                                 }
                               }
                             ]
                           }
-                        }
+                        },
+                        "title": "Error Rates"
                       }
                     },
                     {
                       "kind": "RowsLayoutRow",
                       "spec": {
-                        "title": "Latency",
                         "collapse": false,
                         "layout": {
                           "kind": "TabsLayout",
@@ -1643,7 +1656,6 @@
                               {
                                 "kind": "TabsLayoutTab",
                                 "spec": {
-                                  "title": "$Route",
                                   "layout": {
                                     "kind": "GridLayout",
                                     "spec": {
@@ -1651,20 +1663,20 @@
                                         {
                                           "kind": "GridLayoutItem",
                                           "spec": {
-                                            "x": 0,
-                                            "y": 0,
-                                            "width": 24,
-                                            "height": 10,
                                             "element": {
                                               "kind": "ElementReference",
                                               "name": "panel-1"
                                             },
+                                            "height": 10,
                                             "repeat": {
-                                              "mode": "variable",
-                                              "value": "Latency",
                                               "direction": "h",
-                                              "maxPerRow": 2
-                                            }
+                                              "maxPerRow": 2,
+                                              "mode": "variable",
+                                              "value": "Latency"
+                                            },
+                                            "width": 24,
+                                            "x": 0,
+                                            "y": 0
                                           }
                                         }
                                       ]
@@ -1673,18 +1685,19 @@
                                   "repeat": {
                                     "mode": "variable",
                                     "value": "Route"
-                                  }
+                                  },
+                                  "title": "$Route"
                                 }
                               }
                             ]
                           }
-                        }
+                        },
+                        "title": "Latency"
                       }
                     },
                     {
                       "kind": "RowsLayoutRow",
                       "spec": {
-                        "title": "Throughput",
                         "collapse": false,
                         "layout": {
                           "kind": "GridLayout",
@@ -1693,44 +1706,44 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 24,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-7"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 24,
+                                  "x": 0,
+                                  "y": 0
                                 }
                               },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 8,
-                                  "width": 24,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-8"
                                   },
+                                  "height": 8,
                                   "repeat": {
-                                    "mode": "variable",
-                                    "value": "Route",
                                     "direction": "h",
-                                    "maxPerRow": 2
-                                  }
+                                    "maxPerRow": 2,
+                                    "mode": "variable",
+                                    "value": "Route"
+                                  },
+                                  "width": 24,
+                                  "x": 0,
+                                  "y": 8
                                 }
                               }
                             ]
                           }
-                        }
+                        },
+                        "title": "Throughput"
                       }
                     },
                     {
                       "kind": "RowsLayoutRow",
                       "spec": {
-                        "title": "Resource Usage",
                         "collapse": false,
                         "layout": {
                           "kind": "GridLayout",
@@ -1739,76 +1752,78 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-9"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 12,
+                                  "x": 0,
+                                  "y": 0
                                 }
                               },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 12,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-10"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 12,
+                                  "x": 12,
+                                  "y": 0
                                 }
                               },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 8,
-                                  "width": 12,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-11"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 12,
+                                  "x": 0,
+                                  "y": 8
                                 }
                               },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 12,
-                                  "y": 8,
-                                  "width": 12,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-12"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 12,
+                                  "x": 12,
+                                  "y": 8
                                 }
                               },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 16,
-                                  "width": 12,
-                                  "height": 8,
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-13"
-                                  }
+                                  },
+                                  "height": 8,
+                                  "width": 12,
+                                  "x": 0,
+                                  "y": 16
                                 }
                               }
                             ]
                           }
-                        }
+                        },
+                        "title": "Resource Usage"
                       }
                     }
                   ]
                 }
-              }
+              },
+              "title": "API"
             }
           }
         ]
@@ -1816,12 +1831,17 @@
     },
     "links": [],
     "liveNow": false,
+    "preferences": {
+      "layout": {
+        "kind": "GridLayout",
+        "spec": {
+          "items": []
+        }
+      }
+    },
     "preload": false,
     "tags": [],
     "timeSettings": {
-      "timezone": "browser",
-      "from": "now-1h",
-      "to": "now",
       "autoRefresh": "",
       "autoRefreshIntervals": [
         "5s",
@@ -1835,50 +1855,54 @@
         "2h",
         "1d"
       ],
+      "fiscalYearStartMonth": 0,
+      "from": "now-1h",
       "hideTimepicker": false,
-      "fiscalYearStartMonth": 0
+      "timezone": "browser",
+      "to": "now"
     },
     "title": "URL Shortener",
     "variables": [
       {
         "kind": "QueryVariable",
         "spec": {
-          "name": "Environment",
+          "allowCustomValue": false,
           "current": {
             "text": "project-url-shortener-dev",
             "value": "project-url-shortener-dev"
           },
-          "label": "env",
+          "definition": "label_values({app=\"url-shortener\"},namespace)",
           "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
+          "includeAll": false,
+          "label": "env",
+          "multi": false,
+          "name": "Environment",
+          "options": [],
           "query": {
-            "kind": "DataQuery",
-            "group": "prometheus",
-            "version": "v0",
             "datasource": {
               "name": "PABDA7AB1AD2A1489"
             },
+            "group": "prometheus",
+            "kind": "DataQuery",
             "spec": {
               "qryType": 1,
               "query": "label_values({app=\"url-shortener\"},namespace)",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
-            }
+            },
+            "version": "v0"
           },
+          "refresh": "onDashboardLoad",
           "regex": "",
           "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "label_values({app=\"url-shortener\"},namespace)",
-          "options": [],
-          "multi": false,
-          "includeAll": false,
-          "allowCustomValue": false
+          "skipUrlSync": false,
+          "sort": "disabled"
         }
       },
       {
         "kind": "QueryVariable",
         "spec": {
-          "name": "Route",
+          "allValue": "All",
+          "allowCustomValue": false,
           "current": {
             "text": [
               "GET /v1/url/{code}",
@@ -1893,71 +1917,52 @@
               "GET /healthz"
             ]
           },
-          "label": "route",
+          "definition": "label_values({app=\"url-shortener\", role=\"api\"},route)",
           "hide": "dontHide",
-          "refresh": "onDashboardLoad",
-          "skipUrlSync": false,
+          "includeAll": false,
+          "label": "route",
+          "multi": true,
+          "name": "Route",
+          "options": [],
           "query": {
-            "kind": "DataQuery",
-            "group": "prometheus",
-            "version": "v0",
             "datasource": {
               "name": "PABDA7AB1AD2A1489"
             },
+            "group": "prometheus",
+            "kind": "DataQuery",
             "spec": {
               "qryType": 1,
               "query": "label_values({app=\"url-shortener\", role=\"api\"},route)",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
-            }
+            },
+            "version": "v0"
           },
+          "refresh": "onDashboardLoad",
           "regex": "",
           "regexApplyTo": "value",
-          "sort": "disabled",
-          "definition": "label_values({app=\"url-shortener\", role=\"api\"},route)",
-          "options": [],
-          "multi": true,
-          "includeAll": false,
-          "allValue": "All",
-          "allowCustomValue": false
+          "skipUrlSync": false,
+          "sort": "disabled"
         }
       },
       {
         "kind": "CustomVariable",
         "spec": {
-          "name": "Latency",
-          "query": "0.50,0.90,0.95,0.99",
+          "allowCustomValue": false,
           "current": {
-            "text": [
-              "0.50",
-              "0.90",
-              "0.95",
-              "0.99"
-            ],
-            "value": [
-              "0.50",
-              "0.90",
-              "0.95",
-              "0.99"
-            ]
+            "text": ["0.50", "0.90", "0.95", "0.99"],
+            "value": ["0.50", "0.90", "0.95", "0.99"]
           },
-          "options": [],
-          "multi": true,
+          "hide": "dontHide",
           "includeAll": false,
           "label": "latency",
-          "hide": "dontHide",
+          "multi": true,
+          "name": "Latency",
+          "options": [],
+          "query": "0.50,0.90,0.95,0.99",
           "skipUrlSync": false,
-          "allowCustomValue": false,
           "valuesFormat": "csv"
         }
       }
-    ],
-    "preferences": {
-      "layout": {
-        "kind": "GridLayout",
-        "spec": {
-          "items": []
-        }
-      }
-    }
+    ]
   }
 }
