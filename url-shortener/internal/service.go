@@ -52,8 +52,11 @@ func (u UrlShortenerService) ShortenUrl(ctx context.Context, longUrl string) (st
 			u.logger.Warn("hash collision", "hash", shortUrl, "url", urlToHash)
 			urlToHash += "1" // add suffix to hash again
 		} else {
-			// Write to cache before closing
-			u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
+			// Write to cache before closing. A failure isn't returned: the
+			// URL is stored, and a later read falls back to the database.
+			if err := u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl); err != nil {
+				u.logger.Warn("cache write failed", errorAttrs(err)...)
+			}
 			ok = true
 		}
 	}
@@ -78,6 +81,11 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 	if err == nil {
 		return longUrl, nil
 	}
+	// Anything but a plain miss (a timeout, a lost connection) still falls
+	// back to the database, but shouldn't pass unnoticed.
+	if _, miss := errors.AsType[*ShortUrlNotFound](err); !miss {
+		u.logger.Warn("cache read failed", errorAttrs(err)...)
+	}
 
 	// Retrieve longUrl from DB
 	longUrl, err = u.dbUrlRepo.GetLongUrl(ctx, shortUrl)
@@ -86,7 +94,9 @@ func (u UrlShortenerService) GetLongUrl(ctx context.Context, shortUrl string) (s
 	}
 
 	// Write back to cache (there was a cache miss for some reason!)
-	u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl)
+	if err := u.cacheUrlRepo.PutShortUrl(ctx, shortUrl, longUrl); err != nil {
+		u.logger.Warn("cache write failed", errorAttrs(err)...)
+	}
 
 	return longUrl, nil
 }

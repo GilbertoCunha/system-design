@@ -279,7 +279,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Share of 100ms CFS periods in which the container used up its CPU quota and was paused until the next period. Counted by the kernel, so no pause is missed between scrapes. Any sustained value means requests are stalling, even when average CPU looks low.",
           "id": 10,
           "links": [],
           "title": "CPU Throttling",
@@ -580,7 +580,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Snapshot: sampled once per scrape (15s), so it only shows the state at those instants and misses anything shorter.",
           "id": 12,
           "links": [],
           "title": "Go Routines Count",
@@ -1633,8 +1633,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]) / rate(pgxpool_empty_acquire{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]) / 1e9",
-                        "legendFormat": "Postgres pool wait (avg) {{pod}}",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(pg_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "Postgres pool wait",
                         "range": true
                       }
                     }
@@ -1956,7 +1956,7 @@
         "spec": {
           "id": 16,
           "title": "CPU usage, % of limit",
-          "description": "Near 100% means the container is at its CPU limit. Check throttling next to it.",
+          "description": "Averaged over the rate window, so bursts shorter than that are smoothed away: a container can be well under its limit here and still be paused many times a second. Check CPU throttling next to it.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2076,7 +2076,7 @@
         "spec": {
           "id": 17,
           "title": "CPU throttling",
-          "description": "Share of CFS periods in which the container ran out of CPU quota and was paused.",
+          "description": "Share of 100ms CFS periods in which the container used up its CPU quota and was paused until the next period. Counted by the kernel, so no pause is missed between scrapes. Any sustained value means requests are stalling, even when average CPU looks low.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2317,8 +2317,8 @@
         "kind": "Panel",
         "spec": {
           "id": 19,
-          "title": "Connection pools, % in use",
-          "description": "A full API pool makes requests queue for a connection before they reach Postgres.",
+          "title": "Postgres pool: acquires that had to wait",
+          "description": "Share of connection requests that found no idle connection (waited), and that gave up (acquire timeout, a 503). Counted on every acquire, so pool exhaustion shows up even when it lasts milliseconds.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2338,8 +2338,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * pgxpool_acquired_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"} / pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}",
-                        "legendFormat": "API \u2192 Postgres pool {{pod}}",
+                        "expr": "100 * sum(rate(pgxpool_empty_acquire{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(rate(pgxpool_acquire_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
+                        "legendFormat": "found the pool empty",
                         "range": true
                       }
                     }
@@ -2349,7 +2349,7 @@
                   "kind": "PanelQuery",
                   "spec": {
                     "hidden": false,
-                    "refId": "BACKENDS",
+                    "refId": "TIMEOUT",
                     "query": {
                       "kind": "DataQuery",
                       "group": "prometheus",
@@ -2359,8 +2359,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(cnpg_backends_total{namespace=\"$Environment\", grncunha_com_service=\"db\", usename=\"app\"}) / max(cnpg_pg_settings_setting{namespace=\"$Environment\", grncunha_com_service=\"db\", name=\"max_connections\"})",
-                        "legendFormat": "Postgres connections / max_connections",
+                        "expr": "100 * sum(rate(pgxpool_canceled_acquire_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(rate(pgxpool_acquire_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
+                        "legendFormat": "timed out",
                         "range": true
                       }
                     }
@@ -2740,7 +2740,7 @@
         "spec": {
           "id": 22,
           "title": "API pool connections",
-          "description": "",
+          "description": "Snapshot: sampled once per scrape (15s), so it only shows the state at those instants and misses anything shorter. For waiting, see \"API pool waits\" and \"API pool acquire time\".",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3576,7 +3576,7 @@
         "spec": {
           "id": 27,
           "title": "Server connections by state",
-          "description": "\"active\" is connections running a query right now. If it stays close to the pool size, Postgres itself is the bottleneck. If the pool is full but few are active, the time is spent in the API between queries.",
+          "description": "\"active\" is connections running a query right now. If it stays close to the pool size, Postgres itself is the bottleneck. If the pool is full but few are active, the time is spent in the API between queries. Snapshot: sampled once per scrape (15s), so it only shows the state at those instants and misses anything shorter.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4216,7 +4216,7 @@
         "spec": {
           "id": 32,
           "title": "API pool connections",
-          "description": "go-redis pool size defaults to 10 \u00d7 GOMAXPROCS.",
+          "description": "go-redis pool size defaults to 10 \u00d7 GOMAXPROCS. Snapshot: sampled once per scrape (15s), so it only shows the state at those instants and misses anything shorter.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5107,7 +5107,7 @@
         "spec": {
           "id": 38,
           "title": "Clients",
-          "description": "",
+          "description": "Snapshot: sampled once per scrape (15s), so it only shows the state at those instants and misses anything shorter.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5312,6 +5312,685 @@
                         "editorMode": "code",
                         "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval]))",
                         "legendFormat": "evicted/s",
+                        "range": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short",
+                  "min": 0
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-40": {
+        "kind": "Panel",
+        "spec": {
+          "id": 40,
+          "title": "API log lines by level",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "victoriametrics-logs-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P022A0A8F82CACB18"
+                      },
+                      "spec": {
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} | stats by (level) count() lines",
+                        "queryType": "statsRange",
+                        "legendFormat": "{{level}}",
+                        "maxLines": 1000
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "bars",
+                    "fillOpacity": 80,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-41": {
+        "kind": "Panel",
+        "spec": {
+          "id": 41,
+          "title": "Dependency timeouts",
+          "description": "Log lines that carry a `dependency` field: 503s (ERROR \"dependency timeout\") and cache failures that fell back to Postgres (WARN \"cache read/write failed\").",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "victoriametrics-logs-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P022A0A8F82CACB18"
+                      },
+                      "spec": {
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} dependency:* | stats by (dependency, operation) count() timeouts",
+                        "queryType": "statsRange",
+                        "legendFormat": "{{dependency}} {{operation}}",
+                        "maxLines": 1000
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "bars",
+                    "fillOpacity": 80,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-42": {
+        "kind": "Panel",
+        "spec": {
+          "id": 42,
+          "title": "API errors and warnings",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "victoriametrics-logs-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P022A0A8F82CACB18"
+                      },
+                      "spec": {
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} level:in(ERROR, WARN)",
+                        "queryType": "instant",
+                        "legendFormat": "",
+                        "maxLines": 1000
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "13.2.0",
+            "spec": {
+              "options": {
+                "showTime": true,
+                "wrapLogMessage": true,
+                "prettifyLogMessage": false,
+                "enableLogDetails": true,
+                "dedupStrategy": "none",
+                "sortOrder": "Descending",
+                "showLabels": false,
+                "showCommonLabels": false
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-43": {
+        "kind": "Panel",
+        "spec": {
+          "id": 43,
+          "title": "Postgres logs",
+          "description": "Includes checkpoints, which can line up with latency spikes. CNPG wraps each Postgres line in a JSON \"record\"; it is rewritten here as \"<severity>: <message>\".",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "victoriametrics-logs-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P022A0A8F82CACB18"
+                      },
+                      "spec": {
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"postgres\"} | format if (record.message:*) \"<record.error_severity>: <record.message>\" as _msg",
+                        "queryType": "instant",
+                        "legendFormat": "",
+                        "maxLines": 1000
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "13.2.0",
+            "spec": {
+              "options": {
+                "showTime": true,
+                "wrapLogMessage": true,
+                "prettifyLogMessage": false,
+                "enableLogDetails": true,
+                "dedupStrategy": "none",
+                "sortOrder": "Descending",
+                "showLabels": false,
+                "showCommonLabels": false
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-44": {
+        "kind": "Panel",
+        "spec": {
+          "id": 44,
+          "title": "Redis logs",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "victoriametrics-logs-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P022A0A8F82CACB18"
+                      },
+                      "spec": {
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"redis\"}",
+                        "queryType": "instant",
+                        "legendFormat": "",
+                        "maxLines": 1000
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "13.2.0",
+            "spec": {
+              "options": {
+                "showTime": true,
+                "wrapLogMessage": true,
+                "prettifyLogMessage": false,
+                "enableLogDetails": true,
+                "dedupStrategy": "none",
+                "sortOrder": "Descending",
+                "showLabels": false,
+                "showCommonLabels": false
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-45": {
+        "kind": "Panel",
+        "spec": {
+          "id": 45,
+          "title": "API pool acquire time",
+          "description": "Time a query waited for a connection from the pool, from a histogram of every acquire. Near zero while idle connections are available; grows as soon as the pool runs dry.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "P50",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(0.5, sum by (le) (rate(pg_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "p50",
+                        "range": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "P99",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(pg_pool_acquire_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
+                        "legendFormat": "p99",
+                        "range": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "s",
+                  "min": 0
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
+      },
+      "panel-46": {
+        "kind": "Panel",
+        "spec": {
+          "id": 46,
+          "title": "Requests waiting for a connection (avg)",
+          "description": "Total time spent waiting for a pool connection per second, which equals the average number of requests queued for one (Little's law). From a counter, so short queues between scrapes still count.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (pod) (rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9",
+                        "legendFormat": "waiting {{pod}}",
                         "range": true
                       }
                     }
@@ -5881,6 +6560,32 @@
                                     "name": "panel-23"
                                   }
                                 }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 16,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-45"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 16,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-46"
+                                  }
+                                }
                               }
                             ]
                           }
@@ -6142,6 +6847,112 @@
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-39"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "TabsLayoutTab",
+            "spec": {
+              "title": "Logs",
+              "layout": {
+                "kind": "RowsLayout",
+                "spec": {
+                  "rows": [
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "API",
+                        "collapse": false,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-40"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-41"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 8,
+                                  "width": 24,
+                                  "height": 12,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-42"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "RowsLayoutRow",
+                      "spec": {
+                        "title": "Postgres and Redis",
+                        "collapse": false,
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 12,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-43"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 0,
+                                  "width": 12,
+                                  "height": 12,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-44"
                                   }
                                 }
                               }

@@ -1,6 +1,6 @@
 ---
 app:
-  log_level: error
+  log_level: warn
   port: 8080
   read_header_timeout_seconds: 2
   read_timeout_seconds: 5

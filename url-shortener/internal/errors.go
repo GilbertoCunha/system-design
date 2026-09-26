@@ -6,14 +6,44 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
+// Overloaded is returned when a dependency doesn't answer within its timeout.
+// It records which one and what for, so a log line says more than
+// "context deadline exceeded".
 type Overloaded struct {
-	msg string
+	Dependency string        // "postgres" or "redis"
+	Operation  string        // "acquire_conn", or the query name
+	Timeout    time.Duration // the limit that ran out
+	Elapsed    time.Duration // how long the call actually took
+	Err        error
 }
 
 func (e *Overloaded) Error() string {
-	return "Server overloaded: " + e.msg
+	return fmt.Sprintf(
+		"%s %s timed out after %s (limit %s): %v",
+		e.Dependency, e.Operation, e.Elapsed.Round(time.Millisecond), e.Timeout, e.Err,
+	)
+}
+
+func (e *Overloaded) Unwrap() error {
+	return e.Err
+}
+
+// Log fields for an error: the dependency, operation and timings when it is
+// an Overloaded, so logs can be filtered and counted by them.
+func errorAttrs(err error) []any {
+	if e, ok := errors.AsType[*Overloaded](err); ok {
+		return []any{
+			"dependency", e.Dependency,
+			"operation", e.Operation,
+			"timeout_ms", e.Timeout.Milliseconds(),
+			"elapsed_ms", e.Elapsed.Milliseconds(),
+			"error", err.Error(),
+		}
+	}
+	return []any{"error", err.Error()}
 }
 
 type InvalidUrl struct {
@@ -52,7 +82,7 @@ func (e *ShortUrlNotFound) Error() string {
 
 func HttpErrorHandler(w http.ResponseWriter, err error, logger *slog.Logger) bool {
 	if _, ok := errors.AsType[*Overloaded](err); ok {
-		logger.Error("overloaded", "error", err.Error())
+		logger.Error("dependency timeout", errorAttrs(err)...)
 		w.Header().Set("Retry-After", "5")
 		w.WriteHeader(503)
 		return true

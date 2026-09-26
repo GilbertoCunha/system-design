@@ -32,6 +32,15 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		httpRequestDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
 			Name: "http_request_duration_seconds",
 			Help: "Duration of http requests in seconds",
+			// Most requests finish in a few milliseconds, where the default
+			// buckets have a single 5ms bucket that the p50 can only guess
+			// inside. Fine steps up to 250ms where the tail lives, edges at the
+			// load tests' p99 targets (100ms, 500ms), and nothing past the 5s
+			// write timeout.
+			Buckets: []float64{
+				.001, .0025, .005, .0075, .01, .015, .025, .05, .075,
+				.1, .15, .2, .25, .5, 1, 2.5, 5,
+			},
 		},
 			[]string{"status", "method", "route"},
 		),

@@ -40,6 +40,14 @@ func NewRedisUrlRepo(c *AppConfig, logger *slog.Logger, reg prometheus.Registere
 		redisQueryDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
 			Name: "redis_query_duration_seconds",
 			Help: "Duration of redis queries",
+			// Redis answers in well under a millisecond; with the defaults
+			// 99% of commands fell into the first (5ms) bucket, so the p50 and
+			// p99 were only the middle and edge of that bucket. Starts at
+			// 100µs and stops at the 500ms query timeout.
+			Buckets: []float64{
+				.0001, .00025, .0005, .00075, .001, .0015, .0025, .005, .01, .025,
+				.05, .1, .25, .5,
+			},
 		},
 			[]string{"query", "outcome"},
 		),
@@ -74,7 +82,13 @@ func (r *RedisUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string,
 	if errors.Is(err, redis.Nil) {
 		return "", &ShortUrlNotFound{shortUrl: shortUrl}
 	} else if errors.Is(err, context.DeadlineExceeded) {
-		return "", &Overloaded{msg: err.Error()}
+		return "", &Overloaded{
+			Dependency: "redis",
+			Operation:  "get_long_url",
+			Timeout:    time.Duration(r.config.Redis.Timeouts.QueryTimeoutMs) * time.Millisecond,
+			Elapsed:    time.Duration(elapsed * float64(time.Second)),
+			Err:        err,
+		}
 	} else if err != nil {
 		return "", err
 	}
@@ -101,7 +115,13 @@ func (r *RedisUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl
 
 	// Error handling
 	if errors.Is(err, context.DeadlineExceeded) {
-		return &Overloaded{msg: err.Error()}
+		return &Overloaded{
+			Dependency: "redis",
+			Operation:  "put_short_url",
+			Timeout:    time.Duration(r.config.Redis.Timeouts.QueryTimeoutMs) * time.Millisecond,
+			Elapsed:    time.Duration(elapsed * float64(time.Second)),
+			Err:        err,
+		}
 	}
 
 	return err

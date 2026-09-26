@@ -15,8 +15,9 @@ import (
 )
 
 type PgMetrics struct {
-	pgQueryDurationSeconds *prometheus.HistogramVec
-	pgUrlCollisionTotal    prometheus.Counter
+	pgQueryDurationSeconds       *prometheus.HistogramVec
+	pgPoolAcquireDurationSeconds *prometheus.HistogramVec
+	pgUrlCollisionTotal          prometheus.Counter
 }
 
 type PgUrlRepo struct {
@@ -46,8 +47,27 @@ func NewPgUrlRepo(ctx context.Context, c *AppConfig, logger *slog.Logger, reg pr
 		pgQueryDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
 			Name: "pg_query_duration_seconds",
 			Help: "Postgres query duration in seconds",
+			// Three quarters of queries finish under 5ms, one bucket in the
+			// defaults. Sub-millisecond to 100ms in fine steps, then up to the
+			// 2s query timeout, which is the last bucket that can fill.
+			Buckets: []float64{
+				.0005, .001, .002, .003, .005, .0075, .01, .015, .025, .05, .075,
+				.1, .25, .5, 1, 2,
+			},
 		},
 			[]string{"query", "outcome"},
+		),
+		// The pool's own gauges (acquired, idle) are snapshots taken at scrape
+		// time and miss exhaustion that lasts milliseconds. Every acquire lands
+		// in this histogram, so waiting for a connection can't hide between
+		// scrapes. Finer buckets than the default at the bottom: an acquire
+		// from a pool with idle connections takes well under a millisecond.
+		pgPoolAcquireDurationSeconds: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "pg_pool_acquire_duration_seconds",
+			Help:    "Time spent waiting for a connection from the Postgres pool, in seconds",
+			Buckets: []float64{.0001, .00025, .0005, .001, .0025, .005, .01, .025, .05, .1, .25, .5, 1},
+		},
+			[]string{"outcome"},
 		),
 		pgUrlCollisionTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "short_url_collisions_total",
@@ -85,7 +105,13 @@ func (r *PgUrlRepo) GetLongUrl(ctx context.Context, shortUrl string) (string, er
 	case errors.Is(err, pgx.ErrNoRows):
 		return "", &ShortUrlNotFound{shortUrl: shortUrl}
 	case errors.Is(err, context.DeadlineExceeded):
-		return "", &Overloaded{msg: err.Error()}
+		return "", &Overloaded{
+			Dependency: "postgres",
+			Operation:  "get_long_url",
+			Timeout:    time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs) * time.Millisecond,
+			Elapsed:    time.Duration(elapsed * float64(time.Second)),
+			Err:        err,
+		}
 	case err != nil:
 		return "", err
 	default:
@@ -121,7 +147,13 @@ func (r *PgUrlRepo) PutShortUrl(ctx context.Context, shortUrl string, longUrl st
 	// Error handling
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
-		return &Overloaded{msg: err.Error()}
+		return &Overloaded{
+			Dependency: "postgres",
+			Operation:  "put_short_url",
+			Timeout:    time.Duration(r.config.Postgres.Timeouts.QueryTimeoutMs) * time.Millisecond,
+			Elapsed:    time.Duration(elapsed * float64(time.Second)),
+			Err:        err,
+		}
 	case err != nil:
 		return err
 	}
@@ -153,17 +185,26 @@ func queryOutcome(err error) string {
 }
 
 func (r *PgUrlRepo) AcquireConn(ctx context.Context) (*pgxpool.Conn, error) {
-	acqCtx, cancel := context.WithTimeout(
-		ctx,
-		time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs)*time.Millisecond,
-	)
+	timeout := time.Duration(r.config.Postgres.Timeouts.AcquireTimeoutMs) * time.Millisecond
+	acqCtx, cancel := context.WithTimeout(ctx, timeout)
+	start := time.Now()
 	conn, err := r.pool.Acquire(acqCtx)
+	elapsed := time.Since(start)
 	defer cancel()
+	r.metrics.pgPoolAcquireDurationSeconds.With(prometheus.Labels{
+		"outcome": queryOutcome(err),
+	}).Observe(elapsed.Seconds())
 
 	// Check for context deadline exceeded error
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
-		return nil, &Overloaded{msg: err.Error()}
+		return nil, &Overloaded{
+			Dependency: "postgres",
+			Operation:  "acquire_conn",
+			Timeout:    timeout,
+			Elapsed:    elapsed,
+			Err:        err,
+		}
 	case err != nil:
 		return nil, err
 	default:
