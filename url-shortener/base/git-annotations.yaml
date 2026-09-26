@@ -5,7 +5,7 @@ metadata:
   name: git-annotations
 annotations:
   grncunha.com/git-repository: https://github.com/GilbertoCunha/system-design
-  grncunha.com/git-commit: 294368c8dae8b62db72bbb7f2da6b477bbb8a391
+  grncunha.com/git-commit: 3eb7d9c333df5cddc992e3e9742b111f30d3e48e
 fieldSpecs:
   - path: metadata/annotations
     create: true
