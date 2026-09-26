@@ -51,8 +51,9 @@
           "hide": false,
           "iconColor": "red",
           "legacyOptions": {
-            "tagKeys": "oom",
-            "titleFormat": "OOM Kills"
+            "tagKeys": "container",
+            "titleFormat": "OOM Kill",
+            "textFormat": "{{exported_pod}} / {{container}}"
           },
           "name": "OOM Kills",
           "query": {
@@ -62,7 +63,7 @@
             "group": "prometheus",
             "kind": "DataQuery",
             "spec": {
-              "expr": "increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\"}[1m]) > 0\n  and on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
+              "expr": "# A container restart counted once, at one step, at any zoom level. Every\n# container in the environment: Redis or Postgres are the likelier to be\n# OOM-killed here. Restarts in a pod's first 5 minutes are skipped: they\n# belong to its rollout (a dependency not ready yet), and a counter new\n# within the window is counted in full by increase().\n(\n  increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\"}[$__interval]) > 0\n    unless on (exported_namespace, exported_pod)\n    (time() - kube_pod_created{exported_namespace=\"$Environment\"} < 300)\n)\n  # ...whose last termination was an OOM kill.\n  and on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
               "interval": "",
               "refId": "Anno"
             },
@@ -77,8 +78,9 @@
           "hide": false,
           "iconColor": "dark-orange",
           "legacyOptions": {
-            "tagKeys": "restart",
-            "titleFormat": "Restarts"
+            "tagKeys": "container",
+            "titleFormat": "Restart",
+            "textFormat": "{{exported_pod}} / {{container}}"
           },
           "name": "Restarts",
           "query": {
@@ -88,7 +90,34 @@
             "group": "prometheus",
             "kind": "DataQuery",
             "spec": {
-              "expr": "increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\", exported_pod=~\"url-shortener-api-.*\"}[1m]) > 0\n  unless on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
+              "expr": "# A container restart counted once, at one step, at any zoom level. Every\n# container in the environment: Redis or Postgres are the likelier to be\n# OOM-killed here. Restarts in a pod's first 5 minutes are skipped: they\n# belong to its rollout (a dependency not ready yet), and a counter new\n# within the window is counted in full by increase().\n(\n  increase(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\"}[$__interval]) > 0\n    unless on (exported_namespace, exported_pod)\n    (time() - kube_pod_created{exported_namespace=\"$Environment\"} < 300)\n)\n  # ...for any other reason: probes, crashes, errors.\n  unless on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
+              "interval": "",
+              "refId": "Anno"
+            },
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "tagKeys": "",
+            "titleFormat": "API deploy",
+            "textFormat": "{{version}}"
+          },
+          "name": "API deploys",
+          "query": {
+            "datasource": {
+              "name": "PABDA7AB1AD2A1489"
+            },
+            "group": "prometheus",
+            "kind": "DataQuery",
+            "spec": {
+              "expr": "# A new image_spec (the image as written in the pod spec) that wasn't\n# running one step earlier: one point per rollout, at any zoom level.\n# Not `image`: builds with no code change produce identical images, and\n# the runtime then reports whichever tag it pulled first for them.\nlabel_replace(\n  count by (image_spec) (kube_pod_container_info{exported_namespace=\"$Environment\", container=\"api\"})\n    unless count by (image_spec) (kube_pod_container_info{exported_namespace=\"$Environment\", container=\"api\"} offset $__interval),\n  \"version\", \"$1\", \"image_spec\", \".*:(.+)\"\n)",
               "interval": "",
               "refId": "Anno"
             },
