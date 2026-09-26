@@ -18,8 +18,8 @@ spec:
   template:
     metadata:
       labels:
-        app: url-shortener
-        role: migrations
+        grncunha.com/project: url-shortener
+        grncunha.com/service: migrations
     spec:
       restartPolicy: Never
       securityContext:

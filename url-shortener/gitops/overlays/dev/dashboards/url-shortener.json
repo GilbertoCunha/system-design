@@ -119,7 +119,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(${Latency:raw}, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(${Latency:raw}, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route=\"${Route:raw}\"}[$__rate_interval])))",
                         "legendFormat": "p${Latency}",
                         "range": true
                       },
@@ -418,7 +418,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "sum by (pod) (go_memstats_heap_inuse_bytes{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "sum by (pod) (go_memstats_heap_inuse_bytes{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "Go heap {{pod}}",
                         "range": true
                       },
@@ -537,7 +537,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "go_goroutines{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}",
+                        "expr": "go_goroutines{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}",
                         "legendFormat": "{{pod}}",
                         "range": true
                       },
@@ -651,7 +651,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "rate(go_gc_duration_seconds_sum{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]) * 100",
+                        "expr": "rate(go_gc_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]) * 100",
                         "legendFormat": "{{pod}}",
                         "range": true
                       },
@@ -766,7 +766,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__range]))",
+                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__range]))",
                         "instant": true,
                         "legendFormat": "Error %",
                         "range": false
@@ -850,7 +850,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "Error rate",
                         "range": true
                       },
@@ -965,7 +965,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__range]))",
+                        "expr": "100 * (sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__range])) or vector(0)) / sum(increase(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route=\"${Route:raw}\"}[$__range]))",
                         "instant": true,
                         "legendFormat": "Error %",
                         "range": false
@@ -1049,7 +1049,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__rate_interval])) or vector(0)",
+                        "expr": "sum(rate(http_request_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\", route=\"${Route:raw}\"}[$__rate_interval])) or vector(0)",
                         "legendFormat": "Errors/s",
                         "range": true
                       },
@@ -1164,7 +1164,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "RPS",
                         "range": true
                       },
@@ -1279,7 +1279,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route=\"${Route:raw}\"}[$__rate_interval]))",
+                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route=\"${Route:raw}\"}[$__rate_interval]))",
                         "legendFormat": "RPS",
                         "range": true
                       },
@@ -1562,7 +1562,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval])))",
                         "legendFormat": "HTTP request",
                         "range": true
                       }
@@ -1583,7 +1583,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
                         "legendFormat": "Postgres {{query}}",
                         "range": true
                       }
@@ -1604,7 +1604,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]) / rate(pgxpool_empty_acquire{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]) / 1e9",
+                        "expr": "rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]) / rate(pgxpool_empty_acquire{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]) / 1e9",
                         "legendFormat": "Postgres pool wait (avg) {{pod}}",
                         "range": true
                       }
@@ -1625,7 +1625,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(redis_query_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(redis_query_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
                         "legendFormat": "Redis {{query}}",
                         "range": true
                       }
@@ -1744,7 +1744,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "Requests/s",
                         "range": true
                       }
@@ -1765,7 +1765,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", status=~\"5..\"}[$__rate_interval]))",
+                        "expr": "sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__rate_interval]))",
                         "legendFormat": "5xx/s",
                         "range": true
                       }
@@ -1786,7 +1786,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(pgxpool_canceled_acquire_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum(rate(pgxpool_canceled_acquire_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "Postgres pool acquire timeouts/s",
                         "range": true
                       }
@@ -1807,7 +1807,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(pg_query_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", outcome=\"timeout\"}[$__rate_interval]))",
+                        "expr": "sum(rate(pg_query_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=\"timeout\"}[$__rate_interval]))",
                         "legendFormat": "Postgres query timeouts/s",
                         "range": true
                       }
@@ -1828,7 +1828,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_query_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\", outcome=\"timeout\"}[$__rate_interval]))",
+                        "expr": "sum(rate(redis_query_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=\"timeout\"}[$__rate_interval]))",
                         "legendFormat": "Redis timeouts/s",
                         "range": true
                       }
@@ -2309,7 +2309,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * pgxpool_acquired_conns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"} / pgxpool_max_conns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}",
+                        "expr": "100 * pgxpool_acquired_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"} / pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}",
                         "legendFormat": "API \u2192 Postgres pool {{pod}}",
                         "range": true
                       }
@@ -2330,7 +2330,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(cnpg_backends_total{namespace=\"$Environment\", role=\"db\", usename=\"app\"}) / max(cnpg_pg_settings_setting{namespace=\"$Environment\", role=\"db\", name=\"max_connections\"})",
+                        "expr": "100 * sum(cnpg_backends_total{namespace=\"$Environment\", grncunha_com_service=\"db\", usename=\"app\"}) / max(cnpg_pg_settings_setting{namespace=\"$Environment\", grncunha_com_service=\"db\", name=\"max_connections\"})",
                         "legendFormat": "Postgres connections / max_connections",
                         "range": true
                       }
@@ -2451,7 +2451,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.50, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.50, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
                         "legendFormat": "p50 {{query}}",
                         "range": true
                       }
@@ -2472,7 +2472,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(pg_query_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
                         "legendFormat": "p99 {{query}}",
                         "range": true
                       }
@@ -2591,7 +2591,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (query, outcome) (rate(pg_query_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (query, outcome) (rate(pg_query_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "{{query}} {{outcome}}",
                         "range": true
                       }
@@ -2612,7 +2612,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(short_url_collisions_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum(rate(short_url_collisions_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "short URL collisions",
                         "range": true
                       }
@@ -2731,7 +2731,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (pgxpool_acquired_conns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "sum by (pod) (pgxpool_acquired_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "in use {{pod}}",
                         "range": true
                       }
@@ -2752,7 +2752,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (pgxpool_idle_conns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "sum by (pod) (pgxpool_idle_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "idle {{pod}}",
                         "range": true
                       }
@@ -2773,7 +2773,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(pgxpool_max_conns{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "max(pgxpool_max_conns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "max",
                         "range": true
                       }
@@ -2916,7 +2916,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(pgxpool_empty_acquire{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (pod) (rate(pgxpool_empty_acquire{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "had to wait {{pod}}",
                         "range": true
                       }
@@ -2937,7 +2937,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(pgxpool_canceled_acquire_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (pod) (rate(pgxpool_canceled_acquire_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "gave up (acquire timeout) {{pod}}",
                         "range": true
                       }
@@ -3384,7 +3384,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval]))",
+                        "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval]))",
                         "legendFormat": "commits",
                         "range": true
                       }
@@ -3405,7 +3405,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval]))",
+                        "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval]))",
                         "legendFormat": "rollbacks",
                         "range": true
                       }
@@ -3426,7 +3426,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(cnpg_pg_stat_database_tup_inserted{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval]))",
+                        "expr": "sum(rate(cnpg_pg_stat_database_tup_inserted{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval]))",
                         "legendFormat": "rows inserted",
                         "range": true
                       }
@@ -3447,7 +3447,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(cnpg_pg_stat_database_tup_fetched{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval]))",
+                        "expr": "sum(rate(cnpg_pg_stat_database_tup_fetched{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval]))",
                         "legendFormat": "rows fetched",
                         "range": true
                       }
@@ -3567,7 +3567,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (state) (cnpg_backends_total{namespace=\"$Environment\", role=\"db\", usename=\"app\"})",
+                        "expr": "sum by (state) (cnpg_backends_total{namespace=\"$Environment\", grncunha_com_service=\"db\", usename=\"app\"})",
                         "legendFormat": "{{state}}",
                         "range": true
                       }
@@ -3588,7 +3588,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(cnpg_backends_waiting_total{namespace=\"$Environment\", role=\"db\"})",
+                        "expr": "sum(cnpg_backends_waiting_total{namespace=\"$Environment\", grncunha_com_service=\"db\"})",
                         "legendFormat": "waiting on a lock",
                         "range": true
                       }
@@ -3708,7 +3708,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(cnpg_pg_stat_database_blks_hit{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval])) / (sum(rate(cnpg_pg_stat_database_blks_hit{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval])) + sum(rate(cnpg_pg_stat_database_blks_read{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval])))",
+                        "expr": "100 * sum(rate(cnpg_pg_stat_database_blks_hit{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval])) / (sum(rate(cnpg_pg_stat_database_blks_hit{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval])) + sum(rate(cnpg_pg_stat_database_blks_read{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval])))",
                         "legendFormat": "hit ratio",
                         "range": true
                       }
@@ -3828,7 +3828,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(cnpg_pg_stat_database_blks_read{namespace=\"$Environment\", role=\"db\", datname=\"app\"}[$__rate_interval]))",
+                        "expr": "sum(rate(cnpg_pg_stat_database_blks_read{namespace=\"$Environment\", grncunha_com_service=\"db\", datname=\"app\"}[$__rate_interval]))",
                         "legendFormat": "blocks/s",
                         "range": true
                       }
@@ -3948,7 +3948,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(redis_query_duration_seconds_bucket{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le, query) (rate(redis_query_duration_seconds_bucket{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))",
                         "legendFormat": "p99 API {{query}}",
                         "range": true
                       }
@@ -3969,7 +3969,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by (le, cmd) (rate(redis_commands_latencies_usec_bucket{namespace=\"$Environment\", role=\"cache\", cmd=~\"get|set\"}[$__rate_interval]))) / 1e6",
+                        "expr": "histogram_quantile(0.99, sum by (le, cmd) (rate(redis_commands_latencies_usec_bucket{namespace=\"$Environment\", grncunha_com_service=\"cache\", cmd=~\"get|set\"}[$__rate_interval]))) / 1e6",
                         "legendFormat": "p99 server {{cmd}}",
                         "range": true
                       }
@@ -4088,7 +4088,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (query, outcome) (rate(redis_query_duration_seconds_count{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (query, outcome) (rate(redis_query_duration_seconds_count{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "{{query}} {{outcome}}",
                         "range": true
                       }
@@ -4207,7 +4207,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (redis_pool_conn_total_current{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"} - redis_pool_conn_idle_current{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "sum by (pod) (redis_pool_conn_total_current{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"} - redis_pool_conn_idle_current{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "in use {{pod}}",
                         "range": true
                       }
@@ -4228,7 +4228,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (redis_pool_conn_idle_current{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"})",
+                        "expr": "sum by (pod) (redis_pool_conn_idle_current{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "idle {{pod}}",
                         "range": true
                       }
@@ -4348,7 +4348,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(redis_pool_miss_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (pod) (rate(redis_pool_miss_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "no idle connection {{pod}}",
                         "range": true
                       }
@@ -4369,7 +4369,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(redis_pool_timeout_total{namespace=\"$Environment\", app=\"url-shortener\", role=\"api\"}[$__rate_interval]))",
+                        "expr": "sum by (pod) (rate(redis_pool_timeout_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
                         "legendFormat": "pool timeout {{pod}}",
                         "range": true
                       }
@@ -4509,7 +4509,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(redis_cpu_user_main_thread_seconds_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval]) + rate(redis_cpu_sys_main_thread_seconds_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval]))",
+                        "expr": "sum by (pod) (rate(redis_cpu_user_main_thread_seconds_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval]) + rate(redis_cpu_sys_main_thread_seconds_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval]))",
                         "legendFormat": "main thread {{pod}}",
                         "range": true
                       }
@@ -4673,7 +4673,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (redis_memory_used_bytes{namespace=\"$Environment\", role=\"cache\"})",
+                        "expr": "sum by (pod) (redis_memory_used_bytes{namespace=\"$Environment\", grncunha_com_service=\"cache\"})",
                         "legendFormat": "used by data {{pod}}",
                         "range": true
                       }
@@ -4858,7 +4858,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (cmd) (rate(redis_commands_total{namespace=\"$Environment\", role=\"cache\", cmd=~\"get|set\"}[$__rate_interval]))",
+                        "expr": "sum by (cmd) (rate(redis_commands_total{namespace=\"$Environment\", grncunha_com_service=\"cache\", cmd=~\"get|set\"}[$__rate_interval]))",
                         "legendFormat": "{{cmd}}",
                         "range": true
                       }
@@ -4977,7 +4977,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(redis_keyspace_hits_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval])) / (sum(rate(redis_keyspace_hits_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval])) + sum(rate(redis_keyspace_misses_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval])))",
+                        "expr": "100 * sum(rate(redis_keyspace_hits_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval])) / (sum(rate(redis_keyspace_hits_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval])) + sum(rate(redis_keyspace_misses_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval])))",
                         "legendFormat": "hit ratio",
                         "range": true
                       }
@@ -5098,7 +5098,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(redis_connected_clients{namespace=\"$Environment\", role=\"cache\"})",
+                        "expr": "sum(redis_connected_clients{namespace=\"$Environment\", grncunha_com_service=\"cache\"})",
                         "legendFormat": "connected",
                         "range": true
                       }
@@ -5119,7 +5119,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(redis_blocked_clients{namespace=\"$Environment\", role=\"cache\"})",
+                        "expr": "sum(redis_blocked_clients{namespace=\"$Environment\", grncunha_com_service=\"cache\"})",
                         "legendFormat": "blocked",
                         "range": true
                       }
@@ -5140,7 +5140,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_rejected_connections_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval]))",
+                        "expr": "sum(rate(redis_rejected_connections_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval]))",
                         "legendFormat": "rejected/s",
                         "range": true
                       }
@@ -5260,7 +5260,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(redis_db_keys{namespace=\"$Environment\", role=\"cache\"})",
+                        "expr": "sum(redis_db_keys{namespace=\"$Environment\", grncunha_com_service=\"cache\"})",
                         "legendFormat": "keys",
                         "range": true
                       }
@@ -5281,7 +5281,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$Environment\", role=\"cache\"}[$__rate_interval]))",
+                        "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$Environment\", grncunha_com_service=\"cache\"}[$__rate_interval]))",
                         "legendFormat": "evicted/s",
                         "range": true
                       }
@@ -6171,7 +6171,7 @@
             "text": "project-url-shortener-dev",
             "value": "project-url-shortener-dev"
           },
-          "definition": "label_values({app=\"url-shortener\"},namespace)",
+          "definition": "label_values({grncunha_com_project=\"url-shortener\"},namespace)",
           "hide": "dontHide",
           "includeAll": false,
           "label": "env",
@@ -6186,7 +6186,7 @@
             "kind": "DataQuery",
             "spec": {
               "qryType": 1,
-              "query": "label_values({app=\"url-shortener\"},namespace)",
+              "query": "label_values({grncunha_com_project=\"url-shortener\"},namespace)",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
             },
             "version": "v0"
@@ -6217,7 +6217,7 @@
               "GET /healthz"
             ]
           },
-          "definition": "label_values({app=\"url-shortener\", role=\"api\"},route)",
+          "definition": "label_values({grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"},route)",
           "hide": "dontHide",
           "includeAll": false,
           "label": "route",
@@ -6232,7 +6232,7 @@
             "kind": "DataQuery",
             "spec": {
               "qryType": 1,
-              "query": "label_values({app=\"url-shortener\", role=\"api\"},route)",
+              "query": "label_values({grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"},route)",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
             },
             "version": "v0"

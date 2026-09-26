@@ -4,21 +4,21 @@ kind: Deployment
 metadata:
   name: url-shortener-cache
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: url-shortener
-      role: cache
+      grncunha.com/project: url-shortener
+      grncunha.com/service: cache
   template:
     metadata:
       labels:
-        app: url-shortener
-        role: cache
+        grncunha.com/project: url-shortener
+        grncunha.com/service: cache
       annotations:
         # Metrics scraping
         prometheus.io/scrape: "true"
@@ -94,15 +94,15 @@ kind: Service
 metadata:
   name: url-shortener-cache
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   type: ClusterIP
   selector:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   ports:
     - name: redis
       port: 6379
@@ -114,8 +114,8 @@ kind: Service
 metadata:
   name: url-shortener-cache-lb
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -124,8 +124,8 @@ spec:
   externalTrafficPolicy: Cluster
 
   selector:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   ports:
     - name: redis
       port: 6379
@@ -137,15 +137,15 @@ kind: CiliumNetworkPolicy
 metadata:
   name: allow-cache-clients
   labels:
-    app: url-shortener
-    role: db
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   endpointSelector:
     matchLabels:
-      app: url-shortener
-      role: cache
+      grncunha.com/project: url-shortener
+      grncunha.com/service: cache
   ingress:
     - fromEntities:
         - world

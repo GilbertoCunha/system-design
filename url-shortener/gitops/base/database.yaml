@@ -4,16 +4,22 @@ kind: Cluster
 metadata:
   name: url-shortener-db
   labels:
-    app: url-shortener
-    role: db
+    grncunha.com/project: url-shortener
+    grncunha.com/service: db
   annotations:
     # Database is the first resource to be created
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   inheritedMetadata:
+    # Only labels under our own prefix. CNPG sets unprefixed ones itself (a
+    # legacy `role: primary` on the instance pod and PVC), and a plain `role`
+    # here once had the operator and inheritedMetadata overwriting each other
+    # on every reconcile: ~5 reconciles a second, each polling the instance
+    # status over fresh connections, which kept Postgres at 60% of its CPU
+    # limit while idle.
     labels:
-      app: url-shortener
-      role: db
+      grncunha.com/project: url-shortener
+      grncunha.com/service: db
     annotations:
       # Monitoring
       prometheus.io/scrape: "true"
@@ -38,8 +44,8 @@ kind: Service
 metadata:
   name: url-shortener-db-lb
   labels:
-    app: url-shortener
-    role: db
+    grncunha.com/project: url-shortener
+    grncunha.com/service: db
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -61,8 +67,8 @@ kind: CiliumNetworkPolicy
 metadata:
   name: allow-db-clients
   labels:
-    app: url-shortener
-    role: db
+    grncunha.com/project: url-shortener
+    grncunha.com/service: db
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
