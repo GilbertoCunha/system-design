@@ -116,9 +116,13 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	})
 
 	// Server definition
+	var protocols http.Protocols
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", config.App.Port),
 		Handler:           MetricsMiddleware(metrics, mux),
+		Protocols:         &protocols,
 		ReadHeaderTimeout: time.Duration(config.App.ReadHeaderTimeoutSeconds) * time.Second,
 		ReadTimeout:       time.Duration(config.App.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout:      time.Duration(config.App.WriteTimeoutSeconds) * time.Second,
