@@ -5636,7 +5636,7 @@
                         "name": "P022A0A8F82CACB18"
                       },
                       "spec": {
-                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} | stats by (level) count() lines",
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} level:~\"^(${LogLevel:pipe})$\" | stats by (level) count() lines",
                         "queryType": "statsRange",
                         "legendFormat": "{{level}}",
                         "maxLines": 1000
@@ -5854,7 +5854,7 @@
         "kind": "Panel",
         "spec": {
           "id": 42,
-          "title": "API errors and warnings",
+          "title": "API logs",
           "description": "",
           "links": [],
           "data": {
@@ -5874,7 +5874,7 @@
                         "name": "P022A0A8F82CACB18"
                       },
                       "spec": {
-                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} level:in(ERROR, WARN)",
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"api\"} level:~\"^(${LogLevel:pipe})$\"",
                         "queryType": "instant",
                         "legendFormat": "",
                         "maxLines": 1000
@@ -5915,7 +5915,7 @@
         "spec": {
           "id": 43,
           "title": "Postgres logs",
-          "description": "Includes checkpoints, which can line up with latency spikes. CNPG wraps each Postgres line in a JSON \"record\"; it is rewritten here as \"<severity>: <message>\".",
+          "description": "Includes checkpoints, which can line up with latency spikes. CNPG wraps each Postgres line in a JSON \"record\"; it is rewritten here as \"<severity>: <message>\". Filtered by the \"log level\" selector: FATAL and PANIC count as ERROR, WARNING as WARN, LOG and NOTICE as INFO.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5934,7 +5934,7 @@
                         "name": "P022A0A8F82CACB18"
                       },
                       "spec": {
-                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"postgres\"} | format if (record.message:*) \"<record.error_severity>: <record.message>\" as _msg",
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"postgres\"} | format if (record.message:*) \"<record.error_severity>: <record.message>\" as _msg | format \"<uc:level>\" as severity | format if (record.error_severity:~\"^(ERROR|FATAL|PANIC)$\") \"ERROR\" as severity | format if (record.error_severity:=\"WARNING\") \"WARN\" as severity | format if (record.error_severity:~\"^(LOG|INFO|NOTICE)$\") \"INFO\" as severity | format if (record.error_severity:~\"^DEBUG\") \"DEBUG\" as severity | format if (severity:=\"WARNING\") \"WARN\" as severity | filter severity:~\"^(${LogLevel:pipe})$\"",
                         "queryType": "instant",
                         "legendFormat": "",
                         "maxLines": 1000
@@ -5975,7 +5975,7 @@
         "spec": {
           "id": 44,
           "title": "Redis logs",
-          "description": "",
+          "description": "Filtered by the \"log level\" selector, from the marker Redis puts on each line: # is WARN, * is INFO, - and . are DEBUG.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5994,7 +5994,7 @@
                         "name": "P022A0A8F82CACB18"
                       },
                       "spec": {
-                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"redis\"}",
+                        "expr": "{kubernetes.pod_namespace=\"$Environment\", kubernetes.container_name=\"redis\"} | extract \"<_> <_> <_> <_> <_> <marker> \" from _msg | format \"INFO\" as severity | format if (marker:=\"#\") \"WARN\" as severity | format if (marker:~\"^[-.]$\") \"DEBUG\" as severity | filter severity:~\"^(${LogLevel:pipe})$\"",
                         "queryType": "instant",
                         "legendFormat": "",
                         "maxLines": 1000
@@ -7935,7 +7935,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max_over_time((sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9 + sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])))[$__range:$__rate_interval])",
+                        "expr": "max_over_time((sum(rate(pgxpool_empty_acquire_wait_time_ns{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / 1e9 + (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))))[$__range:$__rate_interval])",
                         "legendFormat": "",
                         "range": false,
                         "interval": "5s",
@@ -8411,7 +8411,7 @@
         "spec": {
           "id": 65,
           "title": "Requests waiting for a connection (avg)",
-          "description": "Time spent waiting for a pool connection, per second: the average number of requests queued (Little's law). From counters, so short queues count. Redis only counts waits that got a connection: waits that timed out show up in \"Failures by cause\".",
+          "description": "Time spent waiting for a pool connection, per second: the average number of requests queued (Little's law). From counters, so short queues count. Redis only counts waits that got a connection: waits that timed out show up in \"Failures by cause\". go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8453,7 +8453,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
+                        "expr": "(sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval])))",
                         "legendFormat": "Redis",
                         "range": true,
                         "interval": "5s"
@@ -8554,7 +8554,7 @@
         "spec": {
           "id": 66,
           "title": "Average time per request, by part",
-          "description": "Stacked, the parts add up to the average request time (dashed). \"API itself\" is the rest: its own CPU work and waiting for a thread. Redis waits cut short by a timeout count as \"Redis command\". Averages, not p99: percentiles can't be stacked.",
+          "description": "Stacked, the parts add up to the average request time (dashed). \"API itself\" is the rest: its own CPU work and waiting for a thread. Redis waits cut short by a timeout count as \"Redis command\". Averages, not p99: percentiles can't be stacked. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8618,7 +8618,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))), 0)) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "waiting for a Redis connection",
                         "range": true,
                         "interval": "5s"
@@ -8640,7 +8640,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
+                        "expr": "clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))), 0) / sum(rate(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__rate_interval]))",
                         "legendFormat": "Redis command",
                         "range": true,
                         "interval": "5s"
@@ -9299,8 +9299,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval]))",
-                        "legendFormat": "waiting (avg)",
+                        "expr": "(sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval])))",
+                        "legendFormat": "waiting (avg, incl. timed out)",
                         "range": true,
                         "interval": "5s"
                       }
@@ -9718,7 +9718,7 @@
         "spec": {
           "id": 74,
           "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9738,7 +9738,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
+                        "expr": "100 * clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "in use",
                         "range": true,
                         "interval": "5s"
@@ -9760,30 +9760,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0))",
+                        "expr": "100 * (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) / ((sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) + clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))))",
                         "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "IDLE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_min(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) - sum(rate(redis_commands_duration_seconds_total{namespace=\"$Environment\", grncunha_com_service=\"cache\", cmd=~\"get|set\"}[$__rate_interval])), 0) / clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0)",
-                        "legendFormat": "held but not in Redis",
                         "range": true,
                         "interval": "5s"
                       }
@@ -9869,21 +9847,6 @@
                         "id": "custom.lineStyle",
                         "value": {
                           "dash": [10, 10],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "held but not in Redis"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [2, 6],
                           "fill": "dash"
                         }
                       }
@@ -10112,7 +10075,7 @@
         "spec": {
           "id": 76,
           "title": "Redis pool health",
-          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Held but not in Redis: share of the time a connection is held while Redis isn't working on the command (network, and the API itself). Approximate: Redis' own time comes from the exporter. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size.",
+          "description": "In use: average share of the pool's connections held (not a snapshot). Wait share: of the time requests spend on the pool, the share spent queueing for a connection. Wait share only counts waits that got a connection: timed-out waits show up as Redis timeouts. A pool that freezes briefly shows a high wait share with only moderate in use: every queued request adds to the waiting, while holding is capped at the pool size. go-redis only counts waits that got a connection, so time in commands that timed out or were canceled counts as waiting (in a jam, that is where it goes), and \"held\" is capped at the pool size.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10132,7 +10095,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
+                        "expr": "100 * clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))) / sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"})",
                         "legendFormat": "in use",
                         "range": true,
                         "interval": "5s"
@@ -10154,30 +10117,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) / (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0))",
+                        "expr": "100 * (sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) / ((sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) + sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", outcome=~\"timeout|canceled\"}[$__rate_interval]))) + clamp_max(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0), scalar(sum(redis_pool_size{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}))))",
                         "legendFormat": "wait share",
-                        "range": true,
-                        "interval": "5s"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "refId": "IDLE",
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "100 * clamp_min(clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0) - sum(rate(redis_commands_duration_seconds_total{namespace=\"$Environment\", grncunha_com_service=\"cache\", cmd=~\"get|set\"}[$__rate_interval])), 0) / clamp_min(sum(rate(redis_query_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])) - sum(rate(redis_pool_wait_seconds_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\"}[$__rate_interval])), 0)",
-                        "legendFormat": "held but not in Redis",
                         "range": true,
                         "interval": "5s"
                       }
@@ -10267,21 +10208,6 @@
                         }
                       }
                     ]
-                  },
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "held but not in Redis"
-                    },
-                    "properties": [
-                      {
-                        "id": "custom.lineStyle",
-                        "value": {
-                          "dash": [2, 6],
-                          "fill": "dash"
-                        }
-                      }
-                    ]
                   }
                 ]
               },
@@ -10329,7 +10255,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(envoy_cluster_upstream_cx_total{namespace=\"gateway-system\", envoy_cluster_name=~\"kube_$Environment_url-shortener-api_8080\"}[$__rate_interval]))",
+                        "expr": "sum(rate(envoy_cluster_upstream_cx_total{namespace=\"gateway-system\", envoy_cluster_name=~\"kube_${Environment}_url-shortener-api_8080\"}[$__rate_interval]))",
                         "legendFormat": "new connections/s",
                         "range": true,
                         "instant": false
@@ -11925,6 +11851,26 @@
           "regexApplyTo": "value",
           "skipUrlSync": false,
           "sort": "alphabeticalDesc",
+          "allValue": ".*"
+        }
+      },
+      {
+        "kind": "CustomVariable",
+        "spec": {
+          "allowCustomValue": false,
+          "current": {
+            "text": ["All"],
+            "value": ["$__all"]
+          },
+          "hide": "dontHide",
+          "includeAll": true,
+          "label": "log level",
+          "multi": true,
+          "name": "LogLevel",
+          "options": [],
+          "query": "ERROR,WARN,INFO,DEBUG",
+          "skipUrlSync": false,
+          "valuesFormat": "csv",
           "allValue": ".*"
         }
       }
