@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-481e6c2088ed71606043716e0bdf1a1883556ee3
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-06b91b7284e6e40f20211c367e0b421a8226d411
           command:
             - /bin/url_shortener
             - --environment
@@ -30,6 +30,15 @@ spec:
                   containerName: api
                   resource: limits.cpu
                   divisor: "1"
+            # The memory limit in bytes, which the server turns into Go's
+            # own memory limit (GOMEMLIMIT). See setMemoryLimit in
+            # cmd/server.go.
+            - name: MEMORY_LIMIT_BYTES
+              valueFrom:
+                resourceFieldRef:
+                  containerName: api
+                  resource: limits.memory
+                  divisor: "1"
             - name: REDIS_URI
               value: redis://url-shortener-cache:6379
             - name: POSTGRES_URI
@@ -44,7 +53,7 @@ spec:
               memory: 100Mi
             limits:
               cpu: 2
-              memory: 200Mi
+              memory: 500Mi
           # Define readiness and liveness conditions
           # using probes
           readinessProbe:
