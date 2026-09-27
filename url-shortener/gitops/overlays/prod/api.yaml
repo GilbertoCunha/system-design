@@ -30,6 +30,15 @@ spec:
                   containerName: api
                   resource: limits.cpu
                   divisor: "1"
+            # The memory limit in bytes, which the server turns into Go's
+            # own memory limit (GOMEMLIMIT). See setMemoryLimit in
+            # cmd/server.go.
+            - name: MEMORY_LIMIT_BYTES
+              valueFrom:
+                resourceFieldRef:
+                  containerName: api
+                  resource: limits.memory
+                  divisor: "1"
             - name: REDIS_URI
               value: redis://url-shortener-cache:6379
             - name: POSTGRES_URI
@@ -44,7 +53,7 @@ spec:
               memory: 100Mi
             limits:
               cpu: 2
-              memory: 200Mi
+              memory: 500Mi
           # Define readiness and liveness conditions
           # using probes
           readinessProbe:

@@ -88,6 +88,7 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	)
 
 	// Handler definition
+	limiter := LimitInFlight(config.App.MaxInFlight)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
@@ -97,12 +98,12 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.HandleFunc("GET /v1/url/{code}", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("GET /v1/url/{code}", limiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		GetLongUrlHandler(w, r, urlShortener, logger)
-	})
-	mux.HandleFunc("POST /v1/url", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("POST /v1/url", limiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		CreateShortUrlHandler(w, r, urlShortener, logger)
-	})
+	})))
 
 	// Every status each handler above can answer with; keep in step with the
 	// handlers. Their metric series start at zero instead of appearing with

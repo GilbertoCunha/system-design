@@ -6,6 +6,7 @@ app:
   read_timeout_seconds: 5
   write_timeout_seconds: 5
   idle_timeout_seconds: 30
+  max_in_flight: 800
 
 postgres:
   timeouts:

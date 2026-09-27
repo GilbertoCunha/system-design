@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime/debug"
+	"strconv"
 	"syscall"
 
 	"github.com/GilbertoCunha/system-design/url-shortener/internal"
@@ -37,6 +39,7 @@ func run() error {
 	logLevel := logLevelFromStr(config.App.LogLevel)
 	logger := internal.NewLogger(os.Stdout, logLevel)
 	slog.SetDefault(logger)
+	setMemoryLimit(logger)
 
 	// Configure and run API
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -52,6 +55,25 @@ func run() error {
 	}()
 
 	return api.Run(ctx)
+}
+
+// Go's GC paces itself on heap growth alone and knows nothing of the
+// container's memory limit, so under load it lets memory run past it and the
+// kernel kills the process. MEMORY_LIMIT_BYTES carries that limit (see the
+// Deployment), and the GC is told to keep Go's memory under 90% of it: the
+// rest is for what the runtime doesn't account for. An explicit GOMEMLIMIT
+// wins, since the runtime has already applied it.
+func setMemoryLimit(logger *slog.Logger) {
+	if os.Getenv("GOMEMLIMIT") != "" {
+		return
+	}
+	limit, err := strconv.ParseInt(os.Getenv("MEMORY_LIMIT_BYTES"), 10, 64)
+	if err != nil || limit <= 0 {
+		return
+	}
+	goLimit := limit / 10 * 9
+	debug.SetMemoryLimit(goLimit)
+	logger.Info("Go memory limit set", "bytes", goLimit, "container_limit_bytes", limit)
 }
 
 func logLevelFromStr(logLevel string) slog.Level {

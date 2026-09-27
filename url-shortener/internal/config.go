@@ -14,6 +14,7 @@ type AppConfig struct {
 		ReadTimeoutSeconds       int    `mapstructure:"read_timeout_seconds"`
 		WriteTimeoutSeconds      int    `mapstructure:"write_timeout_seconds"`
 		IdleTimeoutSeconds       int    `mapstructure:"idle_timeout_seconds"`
+		MaxInFlight              int    `mapstructure:"max_in_flight"`
 	} `mapstructure:"app"`
 
 	Postgres struct {
