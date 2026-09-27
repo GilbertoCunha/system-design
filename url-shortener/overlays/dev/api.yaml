@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-f82b703889f1b06bf49beec19002b07f8ba6225a
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-adcbb12c2e51b99a319c37c8dfcb12be43b5c32a
           command:
             - /bin/url_shortener
             - --environment
@@ -49,10 +49,10 @@ spec:
           # Define expected resources for the pods
           resources:
             requests:
-              cpu: 500m
+              cpu: 1
               memory: 100Mi
             limits:
-              cpu: 2
+              cpu: 3
               memory: 500Mi
           # Define readiness and liveness conditions
           # using probes
