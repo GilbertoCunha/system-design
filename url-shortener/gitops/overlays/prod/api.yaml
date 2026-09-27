@@ -49,10 +49,10 @@ spec:
           # Define expected resources for the pods
           resources:
             requests:
-              cpu: 500m
+              cpu: 1
               memory: 100Mi
             limits:
-              cpu: 2
+              cpu: 3
               memory: 500Mi
           # Define readiness and liveness conditions
           # using probes
