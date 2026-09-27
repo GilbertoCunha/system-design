@@ -6521,7 +6521,7 @@
         "spec": {
           "id": 48,
           "title": "Failures: k6 vs. API",
-          "description": "k6 counts a request as failed on an unexpected status or a transport error (dial timeouts, resets), which the API never sees. Dropped iterations: k6 had no free VU to start one on time, so the target rate was not reached. k6 lines are increase()/window, not rate(): k6's series start and stop mid-test (one per phase), which rate() counts twice while they overlap.",
+          "description": "k6 counts a request as failed on an unexpected status or a transport error (dial timeouts, resets), which the API never sees. Dropped iterations: k6 had no free VU to start one on time, so the target rate was not reached. k6 lines are increase()/window, not rate(): k6's series start and stop mid-test (one per phase), which rate() counts twice while they overlap. Gateway rejected: 503s the gateway sent itself (circuit breakers full); the API never saw those requests.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6589,6 +6589,27 @@
                         "legendFormat": "k6 dropped iterations",
                         "range": true,
                         "interval": "5s"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "GW",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(envoy_cluster_upstream_rq_active_overflow{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"}[$__rate_interval])) + sum(rate(envoy_cluster_upstream_rq_pending_overflow{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"}[$__rate_interval]))",
+                        "legendFormat": "gateway rejected (503)",
+                        "range": true
                       }
                     }
                   }
@@ -7586,8 +7607,8 @@
         "kind": "Panel",
         "spec": {
           "id": 56,
-          "title": "Errors (5xx)",
-          "description": "Over the selected time range. Share of requests answered with 5xx.",
+          "title": "Errors (5xx), as clients see them",
+          "description": "Over the selected time range. Share of requests for the API that got a 5xx at the gateway: the API's own 5xx plus requests the gateway rejected itself.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7607,10 +7628,9 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 * sum(increase(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", status=~\"5..\"}[$__range])) / sum(increase(http_requests_total{namespace=\"$Environment\", grncunha_com_project=\"url-shortener\", grncunha_com_service=\"api\", route!~\"/metrics|GET /healthz\"}[$__range]))",
+                        "expr": "100 * sum(increase(envoy_cluster_upstream_rq_xx{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\", envoy_response_code_class=\"5\"}[$__range])) / sum(increase(envoy_cluster_upstream_rq_xx{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"}[$__range]))",
                         "legendFormat": "",
                         "range": false,
-                        "interval": "5s",
                         "instant": true
                       }
                     }
@@ -8845,12 +8865,54 @@
         "spec": {
           "id": 67,
           "title": "Failures by cause",
-          "description": "Postgres failures become 503s (dashed). Redis failures don't: the API falls back to Postgres (see \"Reads\"), which adds load there instead.",
+          "description": "Why requests failed. Gateway rejections are 503s the gateway sends itself when its circuit breakers for the API are full: those requests never reach the API. Postgres failures become 503s from the API. Redis failures don't: the API falls back to Postgres. Dashed: 5xx as the API sent them, and as clients got them.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
             "spec": {
               "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "GWRQ",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(envoy_cluster_upstream_rq_active_overflow{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"}[$__rate_interval]))",
+                        "legendFormat": "Gateway: too many requests in flight",
+                        "range": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "GWPQ",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(envoy_cluster_upstream_rq_pending_overflow{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"}[$__rate_interval]))",
+                        "legendFormat": "Gateway: waiting queue full",
+                        "range": true
+                      }
+                    }
+                  }
+                },
                 {
                   "kind": "PanelQuery",
                   "spec": {
@@ -9004,6 +9066,27 @@
                       }
                     }
                   }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "CLIENT5XX",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(rate(envoy_cluster_upstream_rq_xx{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\", envoy_response_code_class=\"5\"}[$__rate_interval]))",
+                        "legendFormat": "5xx to clients (gateway)",
+                        "range": true
+                      }
+                    }
+                  }
                 }
               ],
               "transformations": [],
@@ -9106,6 +9189,36 @@
                         "value": {
                           "mode": "fixed",
                           "fixedColor": "text"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "5xx to clients (gateway)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.stacking",
+                        "value": {
+                          "mode": "none",
+                          "group": "A"
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      },
+                      {
+                        "id": "custom.lineWidth",
+                        "value": 2
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [4, 4],
+                          "fill": "dash"
                         }
                       }
                     ]
@@ -11088,6 +11201,191 @@
             "version": "13.2.0"
           }
         }
+      },
+      "panel-87": {
+        "kind": "Panel",
+        "spec": {
+          "id": 87,
+          "title": "Gateway \u2192 API: requests in flight",
+          "description": "Requests each gateway pod has sent to the API and not yet answered, and requests waiting at the gateway for room. Each gateway pod has its own circuit breaker: past maxRequests (dashed), requests wait; past maxPendingRequests, the gateway answers 503 at once. The limit line needs trackRemaining: true in the API's BackendConfigPolicy. Snapshots every 15s: the rejections in \"Failures by cause\" are the reliable signal.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "ACTIVE",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (pod) (envoy_cluster_upstream_rq_active{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"})",
+                        "legendFormat": "in flight {{pod}}",
+                        "range": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "PENDING",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (pod) (envoy_cluster_upstream_rq_pending_active{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"})",
+                        "legendFormat": "waiting at gateway {{pod}}",
+                        "range": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "LIMIT",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "max(envoy_cluster_upstream_rq_active{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"} + on (pod) envoy_cluster_circuit_breakers_default_remaining_rq{namespace=\"gateway-system\", envoy_cluster_name=\"kube_${Environment}_url-shortener-api_8080\"})",
+                        "legendFormat": "maxRequests (per pod)",
+                        "range": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short",
+                  "min": 0
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "maxRequests (per pod)"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "dash": [10, 10],
+                          "fill": "dash"
+                        }
+                      },
+                      {
+                        "id": "color",
+                        "value": {
+                          "mode": "fixed",
+                          "fixedColor": "red"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.0"
+          }
+        }
       }
     },
     "layout": {
@@ -11239,6 +11537,19 @@
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-77"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-87"
                                   }
                                 }
                               }
