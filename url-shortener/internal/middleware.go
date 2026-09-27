@@ -13,6 +13,7 @@ func LimitInFlight(max int) func(http.Handler) http.Handler {
 				defer func() { <-slots }()
 				next.ServeHTTP(w, req)
 			default:
+				setUnavailableCause(w, causeInFlightLimit)
 				w.Header().Set("Retry-After", "5")
 				http.Error(w, "overloaded", http.StatusServiceUnavailable)
 			}

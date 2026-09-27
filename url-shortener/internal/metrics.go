@@ -14,6 +14,25 @@ type Metrics struct {
 	httpActiveRequests         *prometheus.GaugeVec
 	httpRequestsTotal          *prometheus.CounterVec
 	httpRequestDurationSeconds *prometheus.HistogramVec
+	httpUnavailableTotal       *prometheus.CounterVec
+}
+
+// Why a request was answered 503. Written onto the response by whatever
+// sends the 503 (see setUnavailableCause), and counted by MetricsMiddleware.
+const (
+	// LimitInFlight turned it away: too many requests were already running.
+	causeInFlightLimit = "in_flight_limit"
+	// Sent without naming a cause.
+	causeUnknown = "unknown"
+)
+
+// The causes a 503 can have in practice, for Initialize. Redis timeouts are
+// not among them: reads fall back to Postgres and cache writes are only
+// logged, so they never become a 503.
+var unavailableCauses = []string{
+	causeInFlightLimit,
+	"postgres_acquire", // waiting for a pool connection timed out
+	"postgres_query",   // a query timed out
 }
 
 func NewMetrics(reg prometheus.Registerer) *Metrics {
@@ -45,6 +64,12 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		},
 			[]string{"status", "method", "route"},
 		),
+		httpUnavailableTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "http_unavailable_total",
+			Help: "503 responses, by what caused them: the in-flight limit, or the dependency that timed out and whether waiting for a connection or running the call",
+		},
+			[]string{"method", "route", "cause"},
+		),
 	}
 }
 
@@ -68,6 +93,11 @@ func (m *Metrics) Initialize(routes map[string][]int) {
 			status := strconv.Itoa(code)
 			m.httpRequestsTotal.WithLabelValues(status, method, route)
 			m.httpRequestDurationSeconds.WithLabelValues(status, method, route)
+			if code == http.StatusServiceUnavailable {
+				for _, cause := range unavailableCauses {
+					m.httpUnavailableTotal.WithLabelValues(method, route, cause)
+				}
+			}
 		}
 	}
 }
@@ -75,6 +105,16 @@ func (m *Metrics) Initialize(routes map[string][]int) {
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int
+	cause      string // why it was a 503, when it was one
+}
+
+// Records why a response is a 503, for http_unavailable_total. w is the
+// writer MetricsMiddleware hands down; anything else is ignored, so handlers
+// behave the same without the middleware (in tests, say).
+func setUnavailableCause(w http.ResponseWriter, cause string) {
+	if rec, ok := w.(*statusRecorder); ok {
+		rec.cause = cause
+	}
 }
 
 func (w *statusRecorder) WriteHeader(code int) {
@@ -109,6 +149,18 @@ func MetricsMiddleware(metrics *Metrics, mux *http.ServeMux) http.Handler {
 			"method": method,
 			"route":  route,
 		}).Inc()
+
+		if rw.statusCode == http.StatusServiceUnavailable {
+			cause := rw.cause
+			if cause == "" {
+				cause = causeUnknown
+			}
+			metrics.httpUnavailableTotal.With(prometheus.Labels{
+				"method": method,
+				"route":  route,
+				"cause":  cause,
+			}).Inc()
+		}
 
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		metrics.httpRequestDurationSeconds.With(prometheus.Labels{

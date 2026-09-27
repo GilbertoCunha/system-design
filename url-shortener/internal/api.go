@@ -12,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -89,6 +90,12 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 
 	// Handler definition
 	limiter := LimitInFlight(config.App.MaxInFlight)
+	// The limit from the config, so dashboards draw it as a limit instead of
+	// hard-coding a value that changes here
+	promauto.With(reg).NewGauge(prometheus.GaugeOpts{
+		Name: "http_in_flight_limit",
+		Help: "Requests the API handles at once before answering 503, from the config",
+	}).Set(float64(config.App.MaxInFlight))
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {

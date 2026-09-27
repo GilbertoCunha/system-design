@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,5 +61,53 @@ func TestRequestsUseInitializedSeries(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(metrics.httpRequestsTotal.WithLabelValues("201", "POST", "POST /v1/url")); got != 1 {
 		t.Errorf("POST /v1/url 201 count = %v, want 1", got)
+	}
+}
+
+// Every 503 is counted under what caused it, whether the limiter sent it or
+// a handler did for a dependency that timed out, and those series exist at
+// zero from the start like the rest.
+func TestUnavailableCauses(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	metrics := NewMetrics(reg)
+	logger := slog.New(slog.DiscardHandler)
+	mux := http.NewServeMux()
+	// No slots at all: the limiter turns every request away.
+	mux.Handle("GET /limited", LimitInFlight(0)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	mux.HandleFunc("GET /acquire", func(w http.ResponseWriter, r *http.Request) {
+		HttpErrorHandler(w, &Overloaded{Dependency: "postgres", Operation: "acquire_conn", Err: context.DeadlineExceeded}, logger)
+	})
+	mux.HandleFunc("GET /query", func(w http.ResponseWriter, r *http.Request) {
+		HttpErrorHandler(w, &Overloaded{Dependency: "postgres", Operation: "put_short_url", Err: context.DeadlineExceeded}, logger)
+	})
+	mux.HandleFunc("GET /bare", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+	metrics.Initialize(map[string][]int{"GET /limited": {200, 503}})
+
+	for _, cause := range unavailableCauses {
+		if got := testutil.ToFloat64(metrics.httpUnavailableTotal.WithLabelValues("GET", "GET /limited", cause)); got != 0 {
+			t.Errorf("GET /limited %s initialized at %v, want 0", cause, got)
+		}
+	}
+
+	handler := MetricsMiddleware(metrics, mux)
+	for _, path := range []string{"/limited", "/acquire", "/query", "/bare"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("%s answered %d, want 503", path, rec.Code)
+		}
+	}
+
+	for _, tc := range []struct{ route, cause string }{
+		{"GET /limited", causeInFlightLimit},
+		{"GET /acquire", "postgres_acquire"},
+		{"GET /query", "postgres_query"},
+		{"GET /bare", causeUnknown},
+	} {
+		if got := testutil.ToFloat64(metrics.httpUnavailableTotal.WithLabelValues("GET", tc.route, tc.cause)); got != 1 {
+			t.Errorf("%s %s = %v, want 1", tc.route, tc.cause, got)
+		}
 	}
 }

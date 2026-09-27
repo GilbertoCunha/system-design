@@ -31,6 +31,15 @@ func (e *Overloaded) Unwrap() error {
 	return e.Err
 }
 
+// The cause the 503 this error becomes is counted under: the dependency, and
+// whether the time ran out waiting for a pool connection or running the call.
+func (e *Overloaded) Cause() string {
+	if e.Operation == "acquire_conn" {
+		return e.Dependency + "_acquire"
+	}
+	return e.Dependency + "_query"
+}
+
 // Log fields for an error: the dependency, operation and timings when it is
 // an Overloaded, so logs can be filtered and counted by them.
 func errorAttrs(err error) []any {
@@ -81,8 +90,9 @@ func (e *ShortUrlNotFound) Error() string {
 }
 
 func HttpErrorHandler(w http.ResponseWriter, err error, logger *slog.Logger) bool {
-	if _, ok := errors.AsType[*Overloaded](err); ok {
+	if e, ok := errors.AsType[*Overloaded](err); ok {
 		logger.Error("dependency timeout", errorAttrs(err)...)
+		setUnavailableCause(w, e.Cause())
 		w.Header().Set("Retry-After", "5")
 		w.WriteHeader(503)
 		return true
