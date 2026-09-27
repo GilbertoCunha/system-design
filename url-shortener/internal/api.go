@@ -90,7 +90,7 @@ func NewAPI(ctx context.Context, config *AppConfig, logger *slog.Logger) (*API, 
 	)
 
 	// Handler definition
-	limiter := LimitInFlight(config.App.MaxInFlight)
+	limiter := LimitInFlight(config.App.MaxInFlight, logger)
 	// The limit from the config, so dashboards draw it as a limit instead of
 	// hard-coding a value that changes here
 	promauto.With(reg).NewGauge(prometheus.GaugeOpts{
