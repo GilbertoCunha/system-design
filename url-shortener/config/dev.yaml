@@ -6,7 +6,7 @@ app:
   read_timeout_seconds: 5
   write_timeout_seconds: 5
   idle_timeout_seconds: 30
-  max_in_flight: 800
+  max_in_flight: 1200
 
 postgres:
   timeouts:
@@ -14,7 +14,7 @@ postgres:
     query_timeout_ms: 2000
   # Per API pod. Postgres allows 100 connections (a few reserved)
   pool:
-    min_conns: 40
+    min_conns: 90
     max_conns: 90
 
 redis:
