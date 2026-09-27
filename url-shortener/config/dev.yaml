@@ -21,4 +21,4 @@ redis:
     query_timeout_ms: 500
   # Per API pod
   pool:
-    size: 100
+    size: 200

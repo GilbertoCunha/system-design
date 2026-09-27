@@ -55,7 +55,7 @@ spec:
       targetPort: 8080
       # Communicate over unencrypted HTTP2
       # for http connection sharing
-      appProtocol: kubernetes/h2c
+      appProtocol: kubernetes.io/h2c
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -77,3 +77,20 @@ spec:
     - backendRefs:
         - name: url-shortener-api
           port: 8080
+---
+# Increase kgateway envoy request limits
+# for the API. Default is 1024 requests in
+# flight
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  name: url-shortener-api
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: url-shortener-api
+  circuitBreakers:
+    maxRequests: 10000
+    maxPendingRequests: 10000
+    trackRemaining: true
