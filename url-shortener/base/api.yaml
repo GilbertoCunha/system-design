@@ -24,6 +24,16 @@ spec:
         # 5s instead of the cluster's 15s: the dashboard's rate windows
         # shrink from 1m to 20s, so its graphs lag ~10s instead of ~30s.
         prometheus.io/interval: 5s
+        # Continuous profiling: Pyroscope's Alloy pulls these from the pod's
+        # pprof port (app.pprof_addr in config/). Not on the Service, so the
+        # gateway never reaches it. Block and mutex are left out: Go only
+        # records them once the app sets a sampling rate, which it doesn't.
+        profiles.grafana.com/cpu.scrape: "true"
+        profiles.grafana.com/cpu.port: "6060"
+        profiles.grafana.com/memory.scrape: "true"
+        profiles.grafana.com/memory.port: "6060"
+        profiles.grafana.com/goroutine.scrape: "true"
+        profiles.grafana.com/goroutine.port: "6060"
     spec:
       topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname
@@ -55,7 +65,7 @@ spec:
       targetPort: 8080
       # Communicate over unencrypted HTTP2
       # for http connection sharing
-      # appProtocol: kubernetes.io/h2c
+      appProtocol: kubernetes.io/h2c
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

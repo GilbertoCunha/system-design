@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-04c7ba5335d5cd1e1ea884705aa686abb527ab2d
+          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-4f3168fe4dcccdb7cee4733ff89dcc403171f029
           command:
             - /bin/url_shortener
             - --environment
@@ -32,7 +32,7 @@ spec:
                   divisor: "1"
             # The memory limit in bytes, which the server turns into Go's
             # own memory limit (GOMEMLIMIT). See setMemoryLimit in
-            # cmd/server.go.
+            # cmd/server/main.go.
             - name: MEMORY_LIMIT_BYTES
               valueFrom:
                 resourceFieldRef:
