@@ -33,7 +33,7 @@ spec:
 
   postgresql:
     parameters:
-      synchronous_commits: "off"
+      synchronous_commit: "off"
       shared_buffers: "250MB"
 
   resources:
