@@ -5847,7 +5847,7 @@
                       "group": "grafana-pyroscope-datasource",
                       "version": "v0",
                       "datasource": {
-                        "name": "pyroscope"
+                        "name": "PAF2BCAF32F82481F"
                       },
                       "spec": {
                         "queryType": "profile",
@@ -5898,7 +5898,7 @@
                       "group": "grafana-pyroscope-datasource",
                       "version": "v0",
                       "datasource": {
-                        "name": "pyroscope"
+                        "name": "PAF2BCAF32F82481F"
                       },
                       "spec": {
                         "queryType": "profile",
