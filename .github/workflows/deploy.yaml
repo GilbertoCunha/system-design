@@ -1,0 +1,179 @@
+---
+name: deploy
+
+# Builds each project's image and publishes its manifests to a GitOps branch,
+# which ArgoCD deploys from:
+#
+#   push to main                        -> every project, to gitops/dev
+#   release <project>-vX.Y.Z published  -> that project, to gitops/prod
+#
+# Prod ships the image dev built for the same commit, tagged with the version.
+#
+# Adding a project:
+#   1. Add its folder name to PROJECTS below.
+#   2. Give it a Dockerfile at <project>/Dockerfile.
+#   3. Give it <project>/gitops/{base,overlays/dev,overlays/prod}, and write its
+#      image in the manifests as just `<project>`: this workflow pins the tag.
+#   4. Add it to the homelab catalog, reading <project>/overlays/<env> from
+#      gitops/dev and gitops/prod.
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+
+env:
+  # Space-separated folder names at the repository root.
+  PROJECTS: url-shortener
+
+permissions: {}
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'push' || !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push to gitops/<env>
+      packages: write # push to ghcr.io
+    # One run at a time per environment, so pushes to its branch never race.
+    # GitHub keeps only the newest waiting run: fine for dev, where the newest
+    # commit wins anyway. For prod, publish releases one at a time.
+    concurrency:
+      group: gitops-${{ github.event_name == 'push' && 'dev' || 'prod' }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # to check a release commit is on main
+
+      - name: Decide what to deploy
+        id: plan
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then
+            echo "environment=dev" >> "$GITHUB_OUTPUT"
+            echo "projects=${PROJECTS}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ ! "${TAG}" =~ ^([a-z0-9-]+)-(v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Release tag '${TAG}' is not <project>-vX.Y.Z"
+            exit 1
+          fi
+          project="${BASH_REMATCH[1]}"
+          if [[ " ${PROJECTS} " != *" ${project} "* ]]; then
+            echo "::error::'${project}' is not in PROJECTS (${PROJECTS})"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::${GITHUB_SHA} is not on main"
+            exit 1
+          fi
+          echo "environment=prod" >> "$GITHUB_OUTPUT"
+          echo "projects=${project}" >> "$GITHUB_OUTPUT"
+          echo "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Images are ghcr.io/<owner>/<repo>:<project>-<commit sha>, which never
+      # changes once pushed. Prod reuses dev's image for the commit, and only
+      # builds it if a release was published before dev's run finished.
+      - name: Build images
+        shell: bash
+        env:
+          ENVIRONMENT: ${{ steps.plan.outputs.environment }}
+          DEPLOY_PROJECTS: ${{ steps.plan.outputs.projects }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}" # GHCR wants lowercase
+          for project in ${DEPLOY_PROJECTS}; do
+            image="${repository}:${project}-${GITHUB_SHA}"
+            if [ "${ENVIRONMENT}" = prod ] && docker buildx imagetools inspect "${image}" > /dev/null 2>&1; then
+              echo "Reusing ${image}"
+            else
+              docker buildx build --push --tag "${image}" \
+                --cache-from "type=registry,ref=${repository}:${project}-buildcache" \
+                --cache-to "type=registry,ref=${repository}:${project}-buildcache,mode=max" \
+                "${project}"
+            fi
+            if [ "${ENVIRONMENT}" = prod ]; then
+              # A second tag on the same image, to find a release by name.
+              docker buildx imagetools create --tag "${repository}:${project}-${VERSION}" "${image}"
+            fi
+          done
+
+      # Each project's base and overlay are copied to <project>/ on the branch,
+      # with the image tag and deploy annotations pinned in the overlay. Only
+      # the deployed projects' folders are replaced.
+      - name: Publish manifests to gitops/${{ steps.plan.outputs.environment }}
+        shell: bash
+        env:
+          ENVIRONMENT: ${{ steps.plan.outputs.environment }}
+          DEPLOY_PROJECTS: ${{ steps.plan.outputs.projects }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          RELEASE: ${{ github.event.release.tag_name }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          branch="gitops/${ENVIRONMENT}"
+          worktree="${RUNNER_TEMP}/gitops"
+          git fetch --depth=1 origin "${branch}"
+          git worktree add -B "${branch}" "${worktree}" FETCH_HEAD
+
+          for project in ${DEPLOY_PROJECTS}; do
+            out="${worktree}/${project}"
+            rm -rf "${out}"
+            mkdir -p "${out}/overlays"
+            cp -r "${project}/gitops/base" "${out}/base"
+            cp -r "${project}/gitops/overlays/${ENVIRONMENT}" "${out}/overlays/${ENVIRONMENT}"
+
+            overlay="${out}/overlays/${ENVIRONMENT}"
+            # On object metadata only: on pod templates, every deploy would
+            # restart every pod, Redis and Postgres included.
+            cat > "${overlay}/deploy-annotations.yaml" <<EOF
+          apiVersion: builtin
+          kind: AnnotationsTransformer
+          metadata:
+            name: deploy-annotations
+          annotations:
+            grncunha.com/git-repository: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
+            grncunha.com/git-commit: ${GITHUB_SHA}
+          ${VERSION:+  app.kubernetes.io/version: ${VERSION}}
+          fieldSpecs:
+            - path: metadata/annotations
+              create: true
+          EOF
+            (
+              cd "${overlay}"
+              kustomize edit set image "${project}=${repository}:${project}-${GITHUB_SHA}"
+              kustomize edit add transformer deploy-annotations.yaml
+              # Fail here, not in ArgoCD, if the result doesn't render.
+              kustomize build . > /dev/null
+            )
+          done
+
+          cd "${worktree}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No manifest changes"
+            exit 0
+          fi
+          git commit -m "deploy: ${DEPLOY_PROJECTS} @ ${GITHUB_SHA::7}" \
+            ${RELEASE:+-m "Release: ${RELEASE}"} \
+            -m "Source commit: ${GITHUB_SHA}"
+          git push origin "HEAD:refs/heads/${branch}"
