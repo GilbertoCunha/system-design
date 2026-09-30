@@ -8,6 +8,7 @@ services:
       - local
     ports:
       - "8080:8080"
+      - "6060:6060"
     environment:
       POSTGRES_URI: postgresql://url_shortener:1234567890@database:5432/url_shortener
       REDIS_URI: redis://cache:6379

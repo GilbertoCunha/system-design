@@ -1,4 +1,4 @@
-package internal
+package httpapi
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type Metrics struct {
+type metrics struct {
 	httpActiveRequests         *prometheus.GaugeVec
 	httpRequestsTotal          *prometheus.CounterVec
 	httpRequestDurationSeconds *prometheus.HistogramVec
@@ -18,7 +18,7 @@ type Metrics struct {
 }
 
 // Why a request was answered 503. Written onto the response by whatever
-// sends the 503 (see setUnavailableCause), and counted by MetricsMiddleware.
+// sends the 503 (see setUnavailableCause), and counted by metricsMiddleware.
 const (
 	// LimitInFlight turned it away: too many requests were already running.
 	causeInFlightLimit = "in_flight_limit"
@@ -35,8 +35,8 @@ var unavailableCauses = []string{
 	"postgres_query",   // a query timed out
 }
 
-func NewMetrics(reg prometheus.Registerer) *Metrics {
-	return &Metrics{
+func newMetrics(reg prometheus.Registerer) *metrics {
+	return &metrics{
 		httpActiveRequests: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "http_active_requests",
 			Help: "Number of currently active requests",
@@ -82,7 +82,7 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 //
 // routes maps a mux pattern to the statuses its handler can answer with. The
 // method is the pattern's own, or GET for patterns without one.
-func (m *Metrics) Initialize(routes map[string][]int) {
+func (m *metrics) Initialize(routes map[string][]int) {
 	for route, statuses := range routes {
 		method := "GET"
 		if before, _, ok := strings.Cut(route, " "); ok {
@@ -109,7 +109,7 @@ type statusRecorder struct {
 }
 
 // Records why a response is a 503, for http_unavailable_total. w is the
-// writer MetricsMiddleware hands down; anything else is ignored, so handlers
+// writer metricsMiddleware hands down; anything else is ignored, so handlers
 // behave the same without the middleware (in tests, say).
 func setUnavailableCause(w http.ResponseWriter, cause string) {
 	if rec, ok := w.(*statusRecorder); ok {
@@ -122,51 +122,28 @@ func (w *statusRecorder) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func MetricsMiddleware(metrics *Metrics, mux *http.ServeMux) http.Handler {
+func metricsMiddleware(m *metrics, mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
-		// Active requests
 		method := r.Method
 		_, route := mux.Handler(r)
-		metrics.httpActiveRequests.With(prometheus.Labels{
-			"method": method,
-			"route":  route,
-		}).Inc()
-		defer metrics.httpActiveRequests.With(prometheus.Labels{
-			"method": method,
-			"route":  route,
-		}).Dec()
 
-		// Send request to next handler
+		active := m.httpActiveRequests.WithLabelValues(method, route)
+		active.Inc()
+		defer active.Dec()
+
 		rw := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 		mux.ServeHTTP(rw, r)
 		status := strconv.Itoa(rw.statusCode)
 
-		// Increase total requests
-		metrics.httpRequestsTotal.With(prometheus.Labels{
-			"status": status,
-			"method": method,
-			"route":  route,
-		}).Inc()
-
+		m.httpRequestsTotal.WithLabelValues(status, method, route).Inc()
 		if rw.statusCode == http.StatusServiceUnavailable {
 			cause := rw.cause
 			if cause == "" {
 				cause = causeUnknown
 			}
-			metrics.httpUnavailableTotal.With(prometheus.Labels{
-				"method": method,
-				"route":  route,
-				"cause":  cause,
-			}).Inc()
+			m.httpUnavailableTotal.WithLabelValues(method, route, cause).Inc()
 		}
-
-		elapsed := float64(time.Since(start)) / float64(time.Second)
-		metrics.httpRequestDurationSeconds.With(prometheus.Labels{
-			"status": status,
-			"method": method,
-			"route":  route,
-		}).Observe(elapsed)
+		m.httpRequestDurationSeconds.WithLabelValues(status, method, route).Observe(time.Since(start).Seconds())
 	})
 }

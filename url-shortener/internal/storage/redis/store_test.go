@@ -1,28 +1,28 @@
-package internal
+package redis
 
 import (
 	"context"
 	"errors"
-	"io"
-	"log/slog"
 	"math"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/GilbertoCunha/system-design/url-shortener/internal/config"
+	"github.com/GilbertoCunha/system-design/url-shortener/internal/shortener"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 // A repo whose client never connects: only the connection slots are used
-func newSlotsRepo(t *testing.T, poolSize int) (*RedisUrlRepo, *prometheus.Registry) {
+func newSlotsRepo(t *testing.T, poolSize int) (*Store, *prometheus.Registry) {
 	t.Helper()
-	c := &AppConfig{}
-	c.Redis.Uri = "redis://127.0.0.1:1"
-	c.Redis.Pool.Size = poolSize
-	c.Redis.Timeouts.QueryTimeoutMs = 500
+	var c config.Redis
+	c.Uri = "redis://127.0.0.1:1"
+	c.Pool.Size = poolSize
+	c.Timeouts.Query = 500 * time.Millisecond
 	reg := prometheus.NewRegistry()
-	repo, err := NewRedisUrlRepo(c, slog.New(slog.NewTextHandler(io.Discard, nil)), reg)
+	repo, err := New(c, reg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestSlotsAccountForAllTimeOnThePool(t *testing.T) {
 	elapsed := time.Since(start).Seconds()
 
 	wait := acquireSum(t, reg)
-	held := testutil.ToFloat64(repo.metrics.redisPoolConnHeldSecondsTotal)
+	held := testutil.ToFloat64(repo.metrics.connHeldSeconds)
 
 	if diff := math.Abs(wait + held - onPool); diff > 0.01*onPool {
 		t.Errorf("wait (%.3fs) + held (%.3fs) = %.3fs, want the time on the pool: %.3fs", wait, held, wait+held, onPool)
@@ -102,7 +102,7 @@ func TestSlotsTimeoutCountsAsWaiting(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	_, err = repo.acquireConn(ctx)
-	o, ok := errors.AsType[*Overloaded](err)
+	o, ok := errors.AsType[*shortener.Overloaded](err)
 	if !ok || o.Dependency != "redis" || o.Operation != "acquire_conn" {
 		t.Fatalf("got %v, want an Overloaded redis acquire_conn", err)
 	}

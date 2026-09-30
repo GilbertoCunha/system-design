@@ -1,25 +1,25 @@
-package internal
+package redis
 
 import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
-// redisPoolCollector exports the pool statistics go-redis keeps but
+// poolCollector exports the pool statistics go-redis keeps but
 // redisprometheus leaves out (it has hits, misses, timeouts and connection
 // counts), plus the pool size and query timeout, so dashboards can draw them
 // as limits instead of hard-coding the config.
-type redisPoolCollector struct {
-	client       *redis.Client
+type poolCollector struct {
+	client       *goredis.Client
 	queryTimeout time.Duration
 
 	waits, waitSeconds, pending, unusable, size, timeout *prometheus.Desc
 }
 
-func newRedisPoolCollector(client *redis.Client, queryTimeout time.Duration) *redisPoolCollector {
-	return &redisPoolCollector{
+func newPoolCollector(client *goredis.Client, queryTimeout time.Duration) *poolCollector {
+	return &poolCollector{
 		client:       client,
 		queryTimeout: queryTimeout,
 		waits: prometheus.NewDesc("redis_pool_wait_total",
@@ -40,13 +40,13 @@ func newRedisPoolCollector(client *redis.Client, queryTimeout time.Duration) *re
 	}
 }
 
-func (c *redisPoolCollector) Describe(ch chan<- *prometheus.Desc) {
+func (c *poolCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, d := range []*prometheus.Desc{c.waits, c.waitSeconds, c.pending, c.unusable, c.size, c.timeout} {
 		ch <- d
 	}
 }
 
-func (c *redisPoolCollector) Collect(ch chan<- prometheus.Metric) {
+func (c *poolCollector) Collect(ch chan<- prometheus.Metric) {
 	s := c.client.PoolStats()
 	ch <- prometheus.MustNewConstMetric(c.waits, prometheus.CounterValue, float64(s.WaitCount))
 	ch <- prometheus.MustNewConstMetric(c.waitSeconds, prometheus.CounterValue, float64(s.WaitDurationNs)/1e9)

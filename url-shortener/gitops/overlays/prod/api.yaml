@@ -32,7 +32,7 @@ spec:
                   divisor: "1"
             # The memory limit in bytes, which the server turns into Go's
             # own memory limit (GOMEMLIMIT). See setMemoryLimit in
-            # cmd/server.go.
+            # cmd/server/main.go.
             - name: MEMORY_LIMIT_BYTES
               valueFrom:
                 resourceFieldRef:

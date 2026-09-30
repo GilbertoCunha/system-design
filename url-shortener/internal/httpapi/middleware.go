@@ -1,4 +1,4 @@
-package internal
+package httpapi
 
 import (
 	"log/slog"

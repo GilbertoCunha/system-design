@@ -2,16 +2,17 @@
 app:
   log_level: debug
   port: 8080
-  read_header_timeout_seconds: 2
-  read_timeout_seconds: 5
-  write_timeout_seconds: 5
-  idle_timeout_seconds: 30
+  read_header_timeout: 2s
+  read_timeout: 5s
+  write_timeout: 5s
+  idle_timeout: 30s
   max_in_flight: 1200
+  pprof_addr: ":6060"
 
 postgres:
   timeouts:
-    acquire_timeout_ms: 500
-    query_timeout_ms: 2000
+    acquire: 500ms
+    query: 2s
   # Per API pod. Postgres allows 100 connections (a few reserved)
   pool:
     min_conns: 90
@@ -19,7 +20,7 @@ postgres:
 
 redis:
   timeouts:
-    query_timeout_ms: 500
+    query: 500ms
   # Per API pod
   pool:
     size: 600

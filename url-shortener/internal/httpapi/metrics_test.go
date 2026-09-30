@@ -1,4 +1,4 @@
-package internal
+package httpapi
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GilbertoCunha/system-design/url-shortener/internal/shortener"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestInitializeCreatesSeriesAtZero(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	metrics := NewMetrics(reg)
+	metrics := newMetrics(reg)
 	metrics.Initialize(map[string][]int{
 		"/metrics":     {200},
 		"POST /v1/url": {201, 503},
@@ -40,7 +41,7 @@ func TestInitializeCreatesSeriesAtZero(t *testing.T) {
 // series instead, and the first scrape of that one hides its burst again.
 func TestRequestsUseInitializedSeries(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	metrics := NewMetrics(reg)
+	metrics := newMetrics(reg)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/url", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
@@ -52,7 +53,7 @@ func TestRequestsUseInitializedSeries(t *testing.T) {
 	})
 	before := testutil.CollectAndCount(metrics.httpRequestDurationSeconds)
 
-	handler := MetricsMiddleware(metrics, mux)
+	handler := metricsMiddleware(metrics, mux)
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/v1/url", strings.NewReader("{}")))
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/healthz", nil))
 
@@ -69,16 +70,17 @@ func TestRequestsUseInitializedSeries(t *testing.T) {
 // zero from the start like the rest.
 func TestUnavailableCauses(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	metrics := NewMetrics(reg)
+	metrics := newMetrics(reg)
 	logger := slog.New(slog.DiscardHandler)
 	mux := http.NewServeMux()
 	// No slots at all: the limiter turns every request away.
 	mux.Handle("GET /limited", LimitInFlight(0, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	h := &handlers{log: logger}
 	mux.HandleFunc("GET /acquire", func(w http.ResponseWriter, r *http.Request) {
-		HttpErrorHandler(w, &Overloaded{Dependency: "postgres", Operation: "acquire_conn", Err: context.DeadlineExceeded}, logger)
+		h.writeError(w, &shortener.Overloaded{Dependency: "postgres", Operation: "acquire_conn", Err: context.DeadlineExceeded})
 	})
 	mux.HandleFunc("GET /query", func(w http.ResponseWriter, r *http.Request) {
-		HttpErrorHandler(w, &Overloaded{Dependency: "postgres", Operation: "put_short_url", Err: context.DeadlineExceeded}, logger)
+		h.writeError(w, &shortener.Overloaded{Dependency: "postgres", Operation: "put_short_url", Err: context.DeadlineExceeded})
 	})
 	mux.HandleFunc("GET /bare", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -91,7 +93,7 @@ func TestUnavailableCauses(t *testing.T) {
 		}
 	}
 
-	handler := MetricsMiddleware(metrics, mux)
+	handler := metricsMiddleware(metrics, mux)
 	for _, path := range []string{"/limited", "/acquire", "/query", "/bare"} {
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))

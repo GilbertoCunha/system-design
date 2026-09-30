@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 go build -o /bin/goose github.com/pressly/goose/v3/cmd/goose
 
 COPY cmd ./cmd
 COPY internal ./internal
-RUN CGO_ENABLED=0 go build -o /bin/url_shortener ./cmd
+RUN CGO_ENABLED=0 go build -o /bin/url_shortener ./cmd/server
 
 FROM scratch
 WORKDIR /src
@@ -17,7 +17,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/url_shortener /bin/url_shortener
 COPY --from=builder /bin/goose /bin/goose
 COPY config ./config
-COPY internal/database/migrations /migrations
+COPY internal/storage/postgres/migrations /migrations
 
 # Numeric UID/GID: scratch has no /etc/passwd to resolve a name against.
 # 65534:65534 is the conventional "nobody". Files stay root-owned and are

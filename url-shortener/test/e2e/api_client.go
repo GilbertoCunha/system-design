@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/GilbertoCunha/system-design/url-shortener/internal"
+	"github.com/GilbertoCunha/system-design/url-shortener/internal/httpapi"
 )
 
 type APIClient struct {
@@ -30,19 +30,19 @@ func (c *APIClient) Health() (*http.Response, error) {
 	return c.Client.Get(c.BaseURL + "/healthz")
 }
 
-func (c *APIClient) GetLongUrl(shortUrl string) (*http.Response, *internal.LongUrl, error) {
-	var longUrl *internal.LongUrl
+func (c *APIClient) GetLongUrl(shortUrl string) (*http.Response, *httpapi.LongUrl, error) {
+	var longUrl *httpapi.LongUrl
 	resp, err := c.Client.Get(
 		c.BaseURL + "/v1/url/" + shortUrl,
 	)
 	if err == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		longUrl = &internal.LongUrl{LongUrl: resp.Header.Get("Location")}
+		longUrl = &httpapi.LongUrl{LongUrl: resp.Header.Get("Location")}
 	}
 
 	return resp, longUrl, err
 }
 
-func (c *APIClient) CreateShortUrl(url string) (*http.Response, *internal.ShortUrl, error) {
+func (c *APIClient) CreateShortUrl(url string) (*http.Response, *httpapi.ShortUrl, error) {
 	body, err := json.Marshal(map[string]string{
 		"longUrl": url,
 	})
@@ -56,9 +56,9 @@ func (c *APIClient) CreateShortUrl(url string) (*http.Response, *internal.ShortU
 		bytes.NewReader(body),
 	)
 
-	var shortUrl *internal.ShortUrl
+	var shortUrl *httpapi.ShortUrl
 	if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		shortUrl = &internal.ShortUrl{}
+		shortUrl = &httpapi.ShortUrl{}
 		if err := json.NewDecoder(resp.Body).Decode(shortUrl); err != nil {
 			return nil, nil, err
 		}

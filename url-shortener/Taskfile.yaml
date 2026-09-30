@@ -35,7 +35,7 @@ tasks:
     cmds:
       - |
         goose postgres $PG_DSN \
-        create migrate sql --dir internal/database/migrations
+        create migrate sql --dir internal/storage/postgres/migrations
 
   ##########
   # Checks #

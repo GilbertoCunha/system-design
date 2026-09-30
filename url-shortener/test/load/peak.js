@@ -8,7 +8,7 @@ const load = rampAndHold({
   ramp: 180,
   hold: 60,
   preAllocatedVUs: 1000,
-  maxVUs: 10000,
+  maxVUs: 5000,
 });
 
 // Test configuration
