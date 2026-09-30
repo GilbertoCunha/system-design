@@ -1893,7 +1893,7 @@
         "spec": {
           "id": 13,
           "title": "API",
-          "description": "Highest average in-flight requests, as a share of the limit. See the API tab.",
+          "description": "How full the in-flight limit got, as requests arrived (p99). At 100%, requests get 503. See the API tab.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1913,7 +1913,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(sum by (pod) (rate(http_request_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_service=\"api\", route=~\"(GET|POST) /v1/.*\"}[$__rate_interval])) / on (pod) max by (pod) (http_in_flight_limit{namespace=\"$Environment\", grncunha_com_service=\"api\"})) * 100",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(http_in_flight_limit_usage_ratio_bucket{namespace=\"$Environment\", grncunha_com_service=\"api\"}[$__rate_interval]))) * 100",
                         "legendFormat": "",
                         "range": true,
                         "instant": false
@@ -4749,8 +4749,8 @@
         "kind": "Panel",
         "spec": {
           "id": 37,
-          "title": "In flight vs limit",
-          "description": "Average requests being handled. Past the dashed limit, the API answers 503.",
+          "title": "How full the limit gets",
+          "description": "Share of the in-flight limit in use as each request arrived. At 100% the API answers 503. The average smooths bursts away, so it stays lower.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4770,8 +4770,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pod) (rate(http_request_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_service=\"api\", route=~\"(GET|POST) /v1/.*\"}[$__rate_interval]))",
-                        "legendFormat": "{{pod}}",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(http_in_flight_limit_usage_ratio_bucket{namespace=\"$Environment\", grncunha_com_service=\"api\"}[$__rate_interval]))) * 100",
+                        "legendFormat": "p99 on arrival",
                         "range": true,
                         "instant": false
                       }
@@ -4792,8 +4792,30 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(http_in_flight_limit{namespace=\"$Environment\", grncunha_com_service=\"api\"})",
-                        "legendFormat": "limit",
+                        "expr": "histogram_quantile(0.50, sum by (le) (rate(http_in_flight_limit_usage_ratio_bucket{namespace=\"$Environment\", grncunha_com_service=\"api\"}[$__rate_interval]))) * 100",
+                        "legendFormat": "p50 on arrival",
+                        "range": true,
+                        "instant": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "C",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "PABDA7AB1AD2A1489"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "max(sum by (pod) (rate(http_request_duration_seconds_sum{namespace=\"$Environment\", grncunha_com_service=\"api\", route=~\"(GET|POST) /v1/.*\"}[$__rate_interval])) / on (pod) max by (pod) (http_in_flight_limit{namespace=\"$Environment\", grncunha_com_service=\"api\"})) * 100",
+                        "legendFormat": "average",
                         "range": true,
                         "instant": false
                       }
@@ -4819,7 +4841,7 @@
                     "drawStyle": "line",
                     "lineInterpolation": "smooth",
                     "lineWidth": 1,
-                    "fillOpacity": 10,
+                    "fillOpacity": 0,
                     "gradientMode": "none",
                     "showPoints": "never",
                     "pointSize": 4,
@@ -4846,32 +4868,67 @@
                       "mode": "none"
                     },
                     "thresholdsStyle": {
-                      "mode": "off"
+                      "mode": "dashed"
                     }
                   },
-                  "unit": "short",
+                  "unit": "percent",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
                         "color": "transparent",
                         "value": null
+                      },
+                      {
+                        "color": "#E02F44",
+                        "value": 100
                       }
                     ]
-                  }
+                  },
+                  "min": 0
                 },
                 "overrides": [
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "limit"
+                      "options": "p99 on arrival"
                     },
                     "properties": [
                       {
                         "id": "color",
                         "value": {
                           "mode": "fixed",
-                          "fixedColor": "#E02F44"
+                          "fixedColor": "#7EB26D"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "p50 on arrival"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "mode": "fixed",
+                          "fixedColor": "#B7DBAB"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "average"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "mode": "fixed",
+                          "fixedColor": "#8E8E8E"
                         }
                       },
                       {

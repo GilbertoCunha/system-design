@@ -24,13 +24,21 @@ var indexHTML []byte
 // registered and what /metrics serves.
 func New(cfg config.App, svc *shortener.Service, log *slog.Logger, reg *prometheus.Registry) *http.Server {
 	h := &handlers{svc: svc, log: log}
-	limit := LimitInFlight(cfg.MaxInFlight, log)
 	// The limit from the config, so dashboards draw it as a limit instead of
 	// hard-coding a value that changes here
 	promauto.With(reg).NewGauge(prometheus.GaugeOpts{
 		Name: "http_in_flight_limit",
 		Help: "Requests the API handles at once before answering 503, from the config",
 	}).Set(float64(cfg.MaxInFlight))
+	// How full the limit is, seen by every request as it arrives. Bursts that
+	// fill it between two scrapes show here; an average of in-flight requests
+	// smooths them away, and a gauge only sees the moment of the scrape.
+	usage := promauto.With(reg).NewHistogram(prometheus.HistogramOpts{
+		Name:    "http_in_flight_limit_usage_ratio",
+		Help:    "Share of the in-flight limit in use when a request arrived. 1 means full: the request was answered 503",
+		Buckets: []float64{.1, .2, .3, .4, .5, .6, .7, .8, .9, .95, .99, 1},
+	})
+	limit := LimitInFlight(cfg.MaxInFlight, usage, log)
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))

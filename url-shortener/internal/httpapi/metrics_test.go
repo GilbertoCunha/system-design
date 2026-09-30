@@ -74,7 +74,7 @@ func TestUnavailableCauses(t *testing.T) {
 	logger := slog.New(slog.DiscardHandler)
 	mux := http.NewServeMux()
 	// No slots at all: the limiter turns every request away.
-	mux.Handle("GET /limited", LimitInFlight(0, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	mux.Handle("GET /limited", LimitInFlight(0, &observations{}, logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
 	h := &handlers{log: logger}
 	mux.HandleFunc("GET /acquire", func(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, &shortener.Overloaded{Dependency: "postgres", Operation: "acquire_conn", Err: context.DeadlineExceeded})
