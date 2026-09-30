@@ -1,14 +1,13 @@
----
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base
+- ../../base
 
 patches:
-  - path: api.yaml
-  - path: cache.yaml
-  - path: database.yaml
+- path: api.yaml
+- path: cache.yaml
+- path: database.yaml
 
 # The Grafana dashboard. Grafana's sidecar loads any ConfigMap labelled
 # `grafana_dashboard`, from any namespace. It lives in this overlay only:
@@ -17,13 +16,19 @@ patches:
 #
 # It is provisioned, so it can't be saved from the UI. Edit it there, export
 # it (v2 resource), and commit the JSON here.
-configMapGenerator:
-  - name: url-shortener-dashboard
-    files:
-      - dashboards/url-shortener.json
-    options:
       # A new name on every change would have the sidecar create the new file
       # and then delete the old one, which has the same file name.
-      disableNameSuffixHash: true
-      labels:
-        grafana_dashboard: "1"
+configMapGenerator:
+- files:
+  - dashboards/url-shortener.json
+  name: url-shortener-dashboard
+  options:
+    disableNameSuffixHash: true
+    labels:
+      grafana_dashboard: "1"
+images:
+- name: url-shortener
+  newName: ghcr.io/gilbertocunha/system-design
+  newTag: url-shortener-d08203ce209a1837ec9a464f7345898782c0a004
+transformers:
+- deploy-annotations.yaml
