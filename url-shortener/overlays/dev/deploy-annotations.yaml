@@ -4,7 +4,7 @@ metadata:
   name: deploy-annotations
 annotations:
   grncunha.com/git-repository: https://github.com/GilbertoCunha/system-design
-  grncunha.com/git-commit: 41fe044c30a34f0fcee4c87a1245972ce6d25a7f
+  grncunha.com/git-commit: 06724e46713e6d1cc2464ccf332d27469292a27f
 
 fieldSpecs:
   - path: metadata/annotations

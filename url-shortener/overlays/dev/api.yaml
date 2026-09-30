@@ -55,6 +55,13 @@ spec:
             limits:
               cpu: 3
               memory: 500Mi
+          # Declared, not just listened on: Pyroscope's Alloy only scrapes a
+          # port the pod declares, matched against the profiles annotations.
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: pprof
+              containerPort: 6060
           # Define readiness and liveness conditions
           # using probes
           readinessProbe:

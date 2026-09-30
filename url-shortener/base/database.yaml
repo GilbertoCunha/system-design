@@ -35,6 +35,9 @@ spec:
     parameters:
       synchronous_commit: "off"
       shared_buffers: "250MB"
+      # Times every read and write of a data file, so pg_stat_database's
+      # blk_read_time and blk_write_time (the dashboard's disk time) aren't 0.
+      track_io_timing: "on"
 
   resources:
     requests:
