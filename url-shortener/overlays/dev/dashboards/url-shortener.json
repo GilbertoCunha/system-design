@@ -70,7 +70,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "expr": "# One band per k6 run, while it streams metrics.\nmax by (testid) (k6_vus{namespace=\"$Environment\"})",
@@ -97,7 +97,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "expr": "# A new image in the pod spec that wasn't there one step earlier.\nlabel_replace(\n  count by (image_spec) (kube_pod_container_info{exported_namespace=\"$Environment\", container=\"api\"})\n    unless count by (image_spec) (kube_pod_container_info{exported_namespace=\"$Environment\", container=\"api\"} offset $__interval),\n  \"version\", \"$1\", \"image_spec\", \".*:(.+)\"\n)",
@@ -124,7 +124,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "expr": "# Container restarts. Skips a pod's first 5 minutes (its rollout),\n# OOM kills (their own marker), and nodes that just rebooted (theirs too).\n(\nincrease(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\"}[$__interval]) > 0\n  unless on (exported_namespace, exported_pod)\n  (time() - kube_pod_created{exported_namespace=\"$Environment\"} < 300)\n)\n  unless on (exported_namespace, exported_pod)\n  (kube_pod_info{exported_namespace=\"$Environment\"} and on (host_ip)\n    label_replace(max by (instance) (node_boot_time_seconds) > time() - 600, \"host_ip\", \"$1\", \"instance\", \"([^:]+):.*\"))\n  unless on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
@@ -151,7 +151,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "expr": "# Container restarts whose last termination was an OOM kill.\n(\nincrease(kube_pod_container_status_restarts_total{exported_namespace=\"$Environment\"}[$__interval]) > 0\n  unless on (exported_namespace, exported_pod)\n  (time() - kube_pod_created{exported_namespace=\"$Environment\"} < 300)\n)\n  and on (exported_namespace, exported_pod, container)\n  kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"} == 1",
@@ -178,7 +178,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "expr": "# A node's boot time is newer than any it had in the half hour before.\n# A window, not one step back: a node down for a while has no sample there.\nmax by (node) (node_boot_time_seconds)\n  > max by (node) (max_over_time(node_boot_time_seconds[30m] offset $__interval))",
@@ -215,7 +215,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "qryType": 1,
@@ -251,7 +251,7 @@
             "group": "prometheus",
             "version": "v0",
             "datasource": {
-              "name": "PABDA7AB1AD2A1489"
+              "name": "victoriametrics"
             },
             "spec": {
               "qryType": 1,
@@ -321,7 +321,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -402,7 +402,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -492,7 +492,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -581,7 +581,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -671,7 +671,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -844,7 +844,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -866,7 +866,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1013,7 +1013,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1035,7 +1035,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1057,7 +1057,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1079,7 +1079,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1101,7 +1101,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1289,7 +1289,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1311,7 +1311,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1333,7 +1333,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1355,7 +1355,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1377,7 +1377,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1566,7 +1566,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1588,7 +1588,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1731,7 +1731,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1820,7 +1820,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1909,7 +1909,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -1998,7 +1998,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2087,7 +2087,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2176,7 +2176,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2302,7 +2302,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2464,7 +2464,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2576,7 +2576,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2688,7 +2688,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2800,7 +2800,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2822,7 +2822,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -2934,7 +2934,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3062,7 +3062,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3084,7 +3084,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3264,7 +3264,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3286,7 +3286,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3308,7 +3308,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3330,7 +3330,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3545,7 +3545,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3567,7 +3567,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3696,7 +3696,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3718,7 +3718,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3740,7 +3740,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3762,7 +3762,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3874,7 +3874,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -3896,7 +3896,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4008,7 +4008,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4120,7 +4120,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4142,7 +4142,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4328,7 +4328,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4440,7 +4440,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4552,7 +4552,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4664,7 +4664,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4766,7 +4766,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4788,7 +4788,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4810,7 +4810,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -4994,7 +4994,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5106,7 +5106,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5128,7 +5128,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5277,7 +5277,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5299,7 +5299,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5411,7 +5411,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5523,7 +5523,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5635,7 +5635,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5657,7 +5657,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5679,7 +5679,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -5864,7 +5864,7 @@
                       "group": "grafana-pyroscope-datasource",
                       "version": "v0",
                       "datasource": {
-                        "name": "PAF2BCAF32F82481F"
+                        "name": "pyroscope"
                       },
                       "spec": {
                         "queryType": "profile",
@@ -5915,7 +5915,7 @@
                       "group": "grafana-pyroscope-datasource",
                       "version": "v0",
                       "datasource": {
-                        "name": "PAF2BCAF32F82481F"
+                        "name": "pyroscope"
                       },
                       "spec": {
                         "queryType": "profile",
@@ -6003,7 +6003,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6117,7 +6117,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6230,7 +6230,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6252,7 +6252,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6416,7 +6416,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6438,7 +6438,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6587,7 +6587,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6609,7 +6609,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6721,7 +6721,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6743,7 +6743,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6765,7 +6765,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -6923,7 +6923,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7055,7 +7055,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7077,7 +7077,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7241,7 +7241,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7263,7 +7263,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7285,7 +7285,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7464,7 +7464,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7486,7 +7486,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7615,7 +7615,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7637,7 +7637,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7781,7 +7781,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7803,7 +7803,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7967,7 +7967,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -7989,7 +7989,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8153,7 +8153,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8175,7 +8175,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8355,7 +8355,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8469,7 +8469,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8491,7 +8491,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8655,7 +8655,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8767,7 +8767,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8789,7 +8789,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -8901,7 +8901,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9029,7 +9029,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9051,7 +9051,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9215,7 +9215,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9237,7 +9237,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9396,7 +9396,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9508,7 +9508,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
@@ -9640,7 +9640,7 @@
                       "group": "prometheus",
                       "version": "v0",
                       "datasource": {
-                        "name": "PABDA7AB1AD2A1489"
+                        "name": "victoriametrics"
                       },
                       "spec": {
                         "editorMode": "code",
