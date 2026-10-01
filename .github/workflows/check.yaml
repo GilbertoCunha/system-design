@@ -1,0 +1,119 @@
+---
+name: check
+
+# Runs on every pull request, Renovate's included. A merge to main deploys every
+# project to dev, so this is the last look before that happens.
+#
+# Each project is checked the same way, by the tasks in its own Taskfile where
+# one exists, so a check here is a command you can run yourself.
+#
+# Load tests are not here. They need the cluster, and they measure rather than
+# pass or fail.
+
+on:
+  pull_request:
+
+permissions: {}
+
+# A new push to a pull request replaces the run for the old one.
+concurrency:
+  group: check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Renovate keeps these current, through the comment above each one.
+  # renovate: datasource=github-releases depName=go-task/task
+  TASK_VERSION: v3.53.1
+  # The version that generated the committed code. A different one writes a
+  # different header, and the "generated code is current" step then fails.
+  # renovate: datasource=github-releases depName=sqlc-dev/sqlc
+  SQLC_VERSION: v1.31.1
+  # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/(?<version>.+)$
+  KUSTOMIZE_VERSION: v5.8.2
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The same folder names as PROJECTS in deploy.yaml. Add a project to
+        # both.
+        project: [url-shortener]
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # No Go install step. The runner ships a Go, and it downloads the exact
+      # version go.mod names the first time it is used.
+      - name: Install the tools
+        run: |
+          set -euo pipefail
+          bin="${RUNNER_TEMP}/bin"
+          mkdir -p "${bin}"
+          fetch() { curl --fail --silent --show-error --location "$1"; }
+
+          fetch "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_linux_amd64.tar.gz" \
+            | tar -xz -C "${bin}" task
+          fetch "https://github.com/sqlc-dev/sqlc/releases/download/${SQLC_VERSION}/sqlc_${SQLC_VERSION#v}_linux_amd64.tar.gz" \
+            | tar -xz -C "${bin}" sqlc
+          fetch "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C "${bin}" kustomize
+
+          echo "${bin}" >> "${GITHUB_PATH}"
+
+      - name: Build and vet
+        run: task go:check
+
+      - name: Unit tests
+        run: task test:unit
+
+      - name: Code is formatted
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "Run gofmt on:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      # Prints what `go mod tidy` would change, and fails if that is anything.
+      - name: go.mod and go.sum are tidy
+        run: go mod tidy -diff
+
+      - name: Generated code is current
+        run: |
+          task sqlc:generate
+          git diff --exit-code
+
+      - name: Manifests render
+        run: |
+          for overlay in gitops/overlays/*/; do
+            kustomize build "${overlay}" > /dev/null
+            echo "${overlay} renders."
+          done
+
+      # Not pushed anywhere. It is the image the end-to-end tests then run.
+      - name: Image builds
+        run: docker compose build
+
+      # The real API, against a real Postgres and Redis, the way docker
+      # compose runs them locally.
+      - name: End-to-end tests
+        run: |
+          task docker:up
+          # The containers being up is not the API answering yet.
+          curl --fail --silent --show-error --output /dev/null \
+            --retry 30 --retry-delay 2 --retry-all-errors \
+            http://localhost:8080/healthz
+          task test:e2e:local
+
+      - name: Show the logs if anything failed
+        if: failure()
+        run: docker compose logs --no-color --tail 200

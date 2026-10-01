@@ -58,6 +58,12 @@ tasks:
   # Tests #
   #########
 
+  # With the race detector, which is what finds two requests touching the
+  # same thing at once.
+  test:unit:
+    cmds:
+      - go test -race ./internal/... ./cmd/...
+
   test:e2e:local:
     deps:
       - task: docker:up

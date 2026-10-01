@@ -1,0 +1,67 @@
+// Renovate opens a pull request when something this repo pins has a newer
+// version. It never merges one: a merge to main deploys every project to dev.
+// The homelab repo has the same arrangement and explains it, in
+// docs/concepts/updates.md there.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Brings the dependency dashboard: one issue listing every update, open or
+  // waiting.
+  extends: ["config:recommended"],
+
+  timezone: "Europe/Berlin",
+  // Early on Monday, so the week's updates arrive together.
+  schedule: ["* 0-6 * * 1"],
+  prConcurrentLimit: 5,
+  labels: ["dependencies"],
+
+  // A release has to be a week old before it is proposed, so someone else finds
+  // the bad ones first.
+  minimumReleaseAge: "7 days",
+  internalChecksFilter: "strict",
+
+  // A changed go.mod without a matching go.sum does not build.
+  postUpdateOptions: ["gomodTidy"],
+
+  // Images in each project's manifests. Renovate only reads Kubernetes files it
+  // is pointed at.
+  kubernetes: {
+    managerFilePatterns: ["/^[^/]+/gitops/.+\\.ya?ml$/"],
+  },
+
+  // The tools the pull request check installs, pinned in the workflow's `env`.
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?\\s+\\w+_VERSION:\\s*(?<currentValue>\\S+)",
+      ],
+    },
+  ],
+
+  packageRules: [
+    {
+      description: "The Go version is written in go.mod and in each Dockerfile, and they must agree",
+      matchPackageNames: ["go", "golang"],
+      groupName: "go",
+    },
+    {
+      description: "Minor and patch updates of Go modules arrive as one pull request; a major gets its own",
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchPackageNames: ["!go"],
+      groupName: "go modules",
+    },
+    {
+      description: "The workflow's actions, together",
+      matchManagers: ["github-actions"],
+      groupName: "github actions",
+    },
+    {
+      description: "A local debugging tool that follows `latest` on purpose",
+      matchPackageNames: ["redis/redisinsight"],
+      enabled: false,
+    },
+  ],
+}
