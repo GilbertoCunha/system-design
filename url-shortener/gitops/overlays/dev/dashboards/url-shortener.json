@@ -1735,7 +1735,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(rate(node_pressure_cpu_waiting_seconds_total[$__rate_interval])) * 100",
+                        "expr": "max(rate(node_pressure_cpu_waiting_seconds_total{node!=\"\"}[$__rate_interval])) * 100",
                         "legendFormat": "",
                         "range": true,
                         "instant": false
@@ -2286,7 +2286,7 @@
         "spec": {
           "id": 18,
           "title": "Host CPU in use, by pool",
-          "description": "vCPUs busy across all VMs. The dashed line is the host's 12 threads.",
+          "description": "vCPUs busy across all VMs, stacked by pool. The dashed line is the 10 host threads the VMs share; the host keeps the other 2 of its 12 for itself.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2306,8 +2306,30 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (pool) (label_replace(rate(node_cpu_seconds_total{mode!~\"idle|iowait|steal\"}[$__rate_interval]), \"pool\", \"$1\", \"node\", \"(cp|system|worker)-.*\"))",
+                        "expr": "sum by (pool) (label_replace(rate(node_cpu_seconds_total{node!=\"\", mode!~\"idle|iowait|steal\"}[$__rate_interval]), \"pool\", \"$1\", \"node\", \"(cp|system|worker)-.*\"))",
                         "legendFormat": "{{pool}}",
+                        "range": true,
+                        "instant": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "victoriametrics"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "vector(10)",
+                        "legendFormat": "limit",
                         "range": true,
                         "instant": false
                       }
@@ -2360,7 +2382,7 @@
                       "mode": "normal"
                     },
                     "thresholdsStyle": {
-                      "mode": "dashed"
+                      "mode": "off"
                     }
                   },
                   "unit": "short",
@@ -2370,10 +2392,6 @@
                       {
                         "color": "transparent",
                         "value": null
-                      },
-                      {
-                        "color": "#E02F44",
-                        "value": 12
                       }
                     ]
                   }
@@ -2423,6 +2441,42 @@
                         }
                       }
                     ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "limit"
+                    },
+                    "properties": [
+                      {
+                        "id": "color",
+                        "value": {
+                          "mode": "fixed",
+                          "fixedColor": "#E02F44"
+                        }
+                      },
+                      {
+                        "id": "custom.lineStyle",
+                        "value": {
+                          "fill": "dash",
+                          "dash": [
+                            10,
+                            10
+                          ]
+                        }
+                      },
+                      {
+                        "id": "custom.fillOpacity",
+                        "value": 0
+                      },
+                      {
+                        "id": "custom.stacking",
+                        "value": {
+                          "group": "A",
+                          "mode": "none"
+                        }
+                      }
+                    ]
                   }
                 ]
               },
@@ -2468,7 +2522,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (node) (rate(node_cpu_seconds_total{mode=\"steal\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{mode=\"idle\"}) * 100",
+                        "expr": "sum by (node) (rate(node_cpu_seconds_total{node!=\"\", mode=\"steal\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{node!=\"\", mode=\"idle\"}) * 100",
                         "legendFormat": "{{node}}",
                         "range": true,
                         "instant": false
@@ -2580,7 +2634,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (node) (rate(node_pressure_cpu_waiting_seconds_total[$__rate_interval])) * 100",
+                        "expr": "max by (node) (rate(node_pressure_cpu_waiting_seconds_total{node!=\"\"}[$__rate_interval])) * 100",
                         "legendFormat": "{{node}}",
                         "range": true,
                         "instant": false
@@ -2671,8 +2725,8 @@
         "kind": "Panel",
         "spec": {
           "id": 21,
-          "title": "Kernel network work, system nodes",
-          "description": "CPU the kernel spends moving packets (softirq) and in syscalls (system). The gateway runs here.",
+          "title": "Kernel network work, worker nodes",
+          "description": "CPU the kernel spends moving packets (softirq) and in syscalls (system). The gateway and the app run here.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2692,7 +2746,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (node, mode) (rate(node_cpu_seconds_total{node=~\"system-.*\", mode=~\"softirq|system\"}[$__rate_interval])) / on (node) group_left () count by (node) (node_cpu_seconds_total{node=~\"system-.*\", mode=\"idle\"}) * 100",
+                        "expr": "sum by (node, mode) (rate(node_cpu_seconds_total{node=~\"worker-.*\", mode=~\"softirq|system\"}[$__rate_interval])) / on (node) group_left () count by (node) (node_cpu_seconds_total{node=~\"worker-.*\", mode=\"idle\"}) * 100",
                         "legendFormat": "{{node}} {{mode}}",
                         "range": true,
                         "instant": false
@@ -2804,7 +2858,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (node) (rate(node_pressure_memory_waiting_seconds_total[$__rate_interval])) * 100",
+                        "expr": "max by (node) (rate(node_pressure_memory_waiting_seconds_total{node!=\"\"}[$__rate_interval])) * 100",
                         "legendFormat": "{{node}} memory",
                         "range": true,
                         "instant": false
@@ -2826,7 +2880,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max by (node) (rate(node_pressure_io_waiting_seconds_total[$__rate_interval])) * 100",
+                        "expr": "max by (node) (rate(node_pressure_io_waiting_seconds_total{node!=\"\"}[$__rate_interval])) * 100",
                         "legendFormat": "{{node}} I/O",
                         "range": true,
                         "instant": false
@@ -3232,7 +3286,7 @@
               },
               "options": {
                 "mode": "markdown",
-                "content": "**Envoy**, on the system nodes. Traffic to the API only, unless a panel says *whole gateway*.",
+                "content": "**Envoy**, on the worker beside the API. Traffic to the API only, unless a panel says *whole gateway*.",
                 "code": {
                   "language": "plaintext",
                   "showLineNumbers": false,
