@@ -4,8 +4,8 @@ metadata:
   name: deploy-annotations
 annotations:
   grncunha.com/git-repository: https://github.com/GilbertoCunha/system-design
-  grncunha.com/git-commit: 7d80928a2d0bd4856dae4ba3a5cb06e50960e6c3
-  app.kubernetes.io/version: v0.2.0
+  grncunha.com/git-commit: 6879533cf2d2f801a86af46a769133433a27b046
+  app.kubernetes.io/version: v0.2.1
 fieldSpecs:
   - path: metadata/annotations
     create: true

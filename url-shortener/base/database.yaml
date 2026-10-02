@@ -31,6 +31,18 @@ spec:
 
   instances: 1
 
+  # CNPG guards the primary with a PodDisruptionBudget that allows no
+  # disruptions. With one instance there is no replica to move to, so the
+  # budget can never be met and every node drain fails on this pod: a Talos
+  # upgrade stops at "error when evicting pods". Without it the pod is evicted
+  # like any other and comes back when the node does.
+  enablePDB: false
+
+  # How long a shutdown waits for clients to disconnect before it closes
+  # their connections. The API holds a pool open and never disconnects, so the
+  # default of 180 was three minutes of waiting on every restart.
+  smartShutdownTimeout: 15
+
   postgresql:
     parameters:
       synchronous_commit: "off"
