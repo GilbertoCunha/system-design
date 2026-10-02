@@ -4,4 +4,4 @@ kind: Service
 metadata:
   name: url-shortener-cache-lb
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: url-shortener-cache.dev.k8s.homelab.grncunha.com
+    external-dns.kubernetes.io/hostname: url-shortener-cache.dev.k8s.homelab.grncunha.com
