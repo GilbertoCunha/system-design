@@ -4,21 +4,28 @@ kind: Deployment
 metadata:
   name: url-shortener-cache
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: url-shortener
-      role: cache
+      grncunha.com/project: url-shortener
+      grncunha.com/service: cache
   template:
     metadata:
       labels:
-        app: url-shortener
-        role: cache
+        grncunha.com/project: url-shortener
+        grncunha.com/service: cache
+      annotations:
+        # Metrics scraping
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: /metrics
+        # See api.yaml
+        prometheus.io/interval: 5s
     spec:
       securityContext:
         runAsNonRoot: true
@@ -33,6 +40,17 @@ spec:
       containers:
         - name: redis
           image: redis:8.10
+          # Keys are written without a TTL, so without a cap Redis grows until
+          # the container is OOM-killed at its limit. Capped at 75% of the
+          # limit, leaving room for Redis' own overhead and fragmentation, it
+          # evicts the least recently used keys instead: a miss is only a
+          # slower Postgres lookup, a kill empties the whole cache.
+          args:
+            - redis-server
+            - --maxmemory
+            - 768mb
+            - --maxmemory-policy
+            - allkeys-lru
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -44,27 +62,49 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 500m
+              memory: 500Mi
             limits:
-              cpu: 500m
+              cpu: 1
               memory: 1Gi
           ports:
             - containerPort: 6379
+
+        # Metrics exporter for redis
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.92.0
+          env:
+            - name: REDIS_ADDR
+              value: redis://localhost:6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          ports:
+            - name: metrics
+              containerPort: 9121
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: url-shortener-cache
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   type: ClusterIP
   selector:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   ports:
     - name: redis
       port: 6379
@@ -76,8 +116,8 @@ kind: Service
 metadata:
   name: url-shortener-cache-lb
   labels:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
@@ -86,8 +126,8 @@ spec:
   externalTrafficPolicy: Cluster
 
   selector:
-    app: url-shortener
-    role: cache
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   ports:
     - name: redis
       port: 6379
@@ -99,15 +139,15 @@ kind: CiliumNetworkPolicy
 metadata:
   name: allow-cache-clients
   labels:
-    app: url-shortener
-    role: db
+    grncunha.com/project: url-shortener
+    grncunha.com/service: cache
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   endpointSelector:
     matchLabels:
-      app: url-shortener
-      role: cache
+      grncunha.com/project: url-shortener
+      grncunha.com/service: cache
   ingress:
     - fromEntities:
         - world

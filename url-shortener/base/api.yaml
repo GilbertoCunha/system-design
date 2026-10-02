@@ -4,19 +4,36 @@ kind: Deployment
 metadata:
   name: url-shortener-api
   labels:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: url-shortener
-      role: api
+      grncunha.com/project: url-shortener
+      grncunha.com/service: api
   template:
     metadata:
       labels:
-        app: url-shortener
-        role: api
+        grncunha.com/project: url-shortener
+        grncunha.com/service: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /metrics
+        # 5s instead of the cluster's 15s: the dashboard's rate windows
+        # shrink from 1m to 20s, so its graphs lag ~10s instead of ~30s.
+        prometheus.io/interval: 5s
+        # Continuous profiling: Pyroscope's Alloy pulls these from the pod's
+        # pprof port (app.pprof_addr in config/). Not on the Service, so the
+        # gateway never reaches it. Block and mutex are left out: Go only
+        # records them once the app sets a sampling rate, which it doesn't.
+        profiles.grafana.com/cpu.scrape: "true"
+        profiles.grafana.com/cpu.port: "6060"
+        profiles.grafana.com/memory.scrape: "true"
+        profiles.grafana.com/memory.port: "6060"
+        profiles.grafana.com/goroutine.scrape: "true"
+        profiles.grafana.com/goroutine.port: "6060"
     spec:
       topologySpreadConstraints:
         - topologyKey: kubernetes.io/hostname
@@ -34,25 +51,28 @@ kind: Service
 metadata:
   name: url-shortener-api
   labels:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
 spec:
   type: ClusterIP
   selector:
-    app: url-shortener
-    role: api
+    grncunha.com/project: url-shortener
+    grncunha.com/service: api
   ports:
     - name: 8080-8080
       port: 8080
       protocol: TCP
       targetPort: 8080
+      # Communicate over unencrypted HTTP2
+      # for http connection sharing
+      appProtocol: kubernetes.io/h2c
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: url-shortener
   labels:
-    app: url-shortener
+    grncunha.com/project: url-shortener
 spec:
   parentRefs:
     - name: gw-internal-dev
@@ -67,3 +87,20 @@ spec:
     - backendRefs:
         - name: url-shortener-api
           port: 8080
+---
+# Increase kgateway envoy request limits
+# for the API. Default is 1024 requests in
+# flight
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: BackendConfigPolicy
+metadata:
+  name: url-shortener-api
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: url-shortener-api
+  circuitBreakers:
+    maxRequests: 10000
+    maxPendingRequests: 10000
+    trackRemaining: true

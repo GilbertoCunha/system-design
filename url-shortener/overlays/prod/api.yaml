@@ -8,7 +8,8 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/gilbertocunha/system-design:url-shortener-backend-31df3f7afd1fa0e1e540d799223459663b99a248
+          # Pinned to the commit's image by the deploy workflow.
+          image: url-shortener
           command:
             - /bin/url_shortener
             - --environment
@@ -20,6 +21,25 @@ spec:
             capabilities:
               drop: ["ALL"]
           env:
+            # Go never picks fewer than 2 threads on its own, and 2 threads
+            # can spend a 500m quota in half of each 100ms period, then get
+            # paused for the rest. Taken from the limit (rounded up to whole
+            # CPUs), so it follows any change to it.
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  containerName: api
+                  resource: limits.cpu
+                  divisor: "1"
+            # The memory limit in bytes, which the server turns into Go's
+            # own memory limit (GOMEMLIMIT). See setMemoryLimit in
+            # cmd/server/main.go.
+            - name: MEMORY_LIMIT_BYTES
+              valueFrom:
+                resourceFieldRef:
+                  containerName: api
+                  resource: limits.memory
+                  divisor: "1"
             - name: REDIS_URI
               value: redis://url-shortener-cache:6379
             - name: POSTGRES_URI
@@ -30,11 +50,18 @@ spec:
           # Define expected resources for the pods
           resources:
             requests:
-              cpu: 200m
+              cpu: 1
               memory: 100Mi
             limits:
-              cpu: 500m
-              memory: 200Mi
+              cpu: 3
+              memory: 500Mi
+          # Declared, not just listened on: Pyroscope's Alloy only scrapes a
+          # port the pod declares, matched against the profiles annotations.
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: pprof
+              containerPort: 6060
           # Define readiness and liveness conditions
           # using probes
           readinessProbe:

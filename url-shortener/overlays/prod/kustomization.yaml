@@ -1,14 +1,16 @@
----
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../base
+- ../../base
 
 patches:
-  - path: api.yaml
-  - path: cache.yaml
-  - path: database.yaml
-
+- path: api.yaml
+- path: cache.yaml
+- path: database.yaml
+images:
+- name: url-shortener
+  newName: ghcr.io/gilbertocunha/system-design
+  newTag: url-shortener-7d80928a2d0bd4856dae4ba3a5cb06e50960e6c3
 transformers:
-  - release-annotations.yaml
+- deploy-annotations.yaml
