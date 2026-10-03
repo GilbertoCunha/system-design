@@ -32,15 +32,18 @@ env:
   KUSTOMIZE_VERSION: v5.8.2
 
 jobs:
-  check:
+  # Three jobs per project, run side by side: the checks that only need Go and
+  # its tools, the image build, and the end-to-end tests. In one job they ran
+  # one after the other, and the image build and the tests took most of it.
+  checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        # The same folder names as PROJECTS in deploy.yaml. Add a project to
-        # both.
+        # The same folder names as PROJECTS in deploy.yaml, and as the other
+        # jobs here. Add a project to all of them.
         project: [url-shortener]
     defaults:
       run:
@@ -99,12 +102,54 @@ jobs:
             echo "${overlay} renders."
           done
 
-      # Not pushed anywhere. It is the image the end-to-end tests then run.
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [url-shortener]
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Not pushed anywhere: deploy.yaml builds the image it ships.
       - name: Image builds
         run: docker compose build
 
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [url-shortener]
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install task
+        run: |
+          set -euo pipefail
+          bin="${RUNNER_TEMP}/bin"
+          mkdir -p "${bin}"
+          curl --fail --silent --show-error --location \
+            "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_linux_amd64.tar.gz" \
+            | tar -xz -C "${bin}" task
+          echo "${bin}" >> "${GITHUB_PATH}"
+
       # The real API, against a real Postgres and Redis, the way docker
-      # compose runs them locally.
+      # compose runs them locally. `task docker:up` builds the image itself.
       - name: End-to-end tests
         run: |
           task docker:up

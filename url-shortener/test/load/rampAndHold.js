@@ -10,8 +10,16 @@ import exec from "k6/execution";
 //
 // RATE, RAMP and HOLD (seconds) override the defaults, for quick runs:
 //   RATE=50 RAMP=5 HOLD=10 k6 run test/load/baseline.js
-export function rampAndHold({ rate, ramp = 30, hold = 60, preAllocatedVUs, maxVUs }) {
-  rate = Number(__ENV.RATE || rate);
+// A test that splits RATE between scenarios itself passes `rateFromEnv: false`.
+export function rampAndHold({
+  rate,
+  ramp = 30,
+  hold = 60,
+  preAllocatedVUs,
+  maxVUs,
+  rateFromEnv = true,
+}) {
+  if (rateFromEnv) rate = Number(__ENV.RATE || rate);
   ramp = Number(__ENV.RAMP || ramp);
   hold = Number(__ENV.HOLD || hold);
   return {
@@ -35,8 +43,9 @@ export function rampAndHold({ rate, ramp = 30, hold = 60, preAllocatedVUs, maxVU
 }
 
 // Tags every metric the VU emits from here on with the test's phase. Call it
-// at the start of each iteration.
+// at the start of each iteration. Timed from the scenario's start, not the
+// test's, so a setup() step doesn't eat into the ramp.
 export function tagPhase(rampSeconds) {
-  const elapsed = exec.instance.currentTestRunDuration / 1000;
+  const elapsed = (Date.now() - exec.scenario.startTime) / 1000;
   exec.vu.metrics.tags.phase = elapsed < rampSeconds ? "ramp" : "steady";
 }
