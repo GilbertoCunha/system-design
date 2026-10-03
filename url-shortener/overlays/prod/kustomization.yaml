@@ -11,6 +11,6 @@ patches:
 images:
 - name: url-shortener
   newName: ghcr.io/gilbertocunha/system-design
-  newTag: url-shortener-6879533cf2d2f801a86af46a769133433a27b046
+  newTag: url-shortener-ed1a3c7a58bd42791ce3730f57eee0a9b5c1e343
 transformers:
 - deploy-annotations.yaml
