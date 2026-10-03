@@ -13,14 +13,15 @@ postgres:
   timeouts:
     acquire: 500ms
     query: 2s
-  # Per API pod. Postgres allows 100 connections (a few reserved)
+  # Per API pod. 20 served 10k req/s cleanly at 10 reads per write
+  # (2026-10-03): most reads are answered by Redis, so few reach Postgres.
   pool:
-    min_conns: 90
-    max_conns: 90
+    min_conns: 5
+    max_conns: 20
 
 redis:
   timeouts:
     query: 500ms
-  # Per API pod
+  # Per API pod. 50 served the same 10k req/s.
   pool:
-    size: 600
+    size: 50
