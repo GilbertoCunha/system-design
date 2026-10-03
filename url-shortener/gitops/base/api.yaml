@@ -39,6 +39,12 @@ spec:
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
+          # Which pods count towards the spread. Without it the constraint
+          # matches no pods and spreads nothing.
+          labelSelector:
+            matchLabels:
+              grncunha.com/project: url-shortener
+              grncunha.com/service: api
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
