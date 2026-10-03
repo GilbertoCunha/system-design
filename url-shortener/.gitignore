@@ -1,0 +1,3 @@
+# Local load test output (k6 summaries saved with tee); the numbers live in the
+# blog write-up, not in git.
+results/
