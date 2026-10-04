@@ -39,6 +39,11 @@ spec:
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
+          # Count only the nodes this pod can run on. By default taints are
+          # ignored here, so the tainted control plane and system nodes count
+          # as empty nodes, and a rollout's new pod on the worker breaks the
+          # skew against them: it stays Pending forever.
+          nodeTaintsPolicy: Honor
           # Which pods count towards the spread. Without it the constraint
           # matches no pods and spreads nothing.
           labelSelector:
