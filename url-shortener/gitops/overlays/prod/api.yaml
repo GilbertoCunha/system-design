@@ -53,7 +53,9 @@ spec:
               cpu: 1
               memory: 100Mi
             limits:
-              cpu: 3
+              # Without the gateway in front it can use the CPU Envoy took:
+              # 16k requests a second used under 2 CPUs
+              cpu: 4
               memory: 500Mi
           # Declared, not just listened on: Pyroscope's Alloy only scrapes a
           # port the pod declares, matched against the profiles annotations.
@@ -87,3 +89,10 @@ spec:
       sectionName: http
   hostnames:
     - url-shortener.grncunha.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-api-lb
+  annotations:
+    external-dns.kubernetes.io/hostname: url-shortener-l3.k8s.homelab.grncunha.com

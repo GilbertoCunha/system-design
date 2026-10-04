@@ -89,7 +89,7 @@ tasks:
       - |
         K6_PROMETHEUS_RW_SERVER_URL=https://victoria-metrics.k8s.homelab.grncunha.com/api/v1/write \
         K6_PROMETHEUS_RW_TREND_STATS="p(50),p(90),p(99),max" \
-        BASE_URL=https://url-shortener.dev.k8s.homelab.grncunha.com \
+        BASE_URL=http://url-shortener-l3.dev.k8s.homelab.grncunha.com \
         k6 run -o experimental-prometheus-rw \
           --tag namespace=project-url-shortener-dev \
           --tag testid=$FILE-$(date -u +%Y%m%dT%H%M%SZ) \
