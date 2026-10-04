@@ -8,6 +8,9 @@ app:
   idle_timeout: 30s
   max_in_flight: 800
   pprof_addr: ":6060"
+  # HTTPS, served only when TLS_CERT_FILE and TLS_KEY_FILE are set
+  tls:
+    port: 8443
 
 postgres:
   timeouts:

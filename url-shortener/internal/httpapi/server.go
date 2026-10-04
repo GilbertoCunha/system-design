@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/tls"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -74,6 +75,26 @@ func New(cfg config.App, svc *shortener.Service, log *slog.Logger, reg *promethe
 	}
 }
 
+// WithTLS returns a server for the same handler as srv that serves HTTPS on
+// port. Go turns HTTP/2 on by default over TLS, and it stays on. The
+// certificate is read once, at start: a renewed one takes a restart.
+func WithTLS(srv *http.Server, port int, certFile, keyFile string) (*http.Server, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("loading TLS certificate: %w", err)
+	}
+	return &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           srv.Handler,
+		TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12},
+		ReadHeaderTimeout: srv.ReadHeaderTimeout,
+		ReadTimeout:       srv.ReadTimeout,
+		WriteTimeout:      srv.WriteTimeout,
+		IdleTimeout:       srv.IdleTimeout,
+		ErrorLog:          srv.ErrorLog,
+	}, nil
+}
+
 // NewDebug builds the pprof server. It listens on its own port, which no
 // Service exposes, so the gateway never reaches it; Pyroscope's Alloy scrapes it
 // on the pod's address. It has no write timeout because a CPU profile streams
@@ -97,8 +118,13 @@ func NewDebug(addr string, log *slog.Logger) *http.Server {
 func Run(ctx context.Context, srv *http.Server, log *slog.Logger) error {
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info("Server started", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Info("Server started", "addr", srv.Addr, "tls", srv.TLSConfig != nil)
+		serve := srv.ListenAndServe
+		if srv.TLSConfig != nil {
+			// The certificate is already in TLSConfig
+			serve = func() error { return srv.ListenAndServeTLS("", "") }
+		}
+		if err := serve(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()

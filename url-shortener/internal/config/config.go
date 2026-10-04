@@ -16,6 +16,14 @@ type App struct {
 	MaxInFlight       int           `mapstructure:"max_in_flight"`
 	// Where pprof listens, apart from the API. Empty turns it off.
 	PprofAddr string `mapstructure:"pprof_addr"`
+	// HTTPS, on a port of its own next to the plain one, which the gateway
+	// and the metrics scrape keep using. Off unless both files are set (from
+	// TLS_CERT_FILE and TLS_KEY_FILE).
+	TLS struct {
+		Port     int    `mapstructure:"port"`
+		CertFile string `mapstructure:"cert_file"`
+		KeyFile  string `mapstructure:"key_file"`
+	} `mapstructure:"tls"`
 }
 
 type Postgres struct {
@@ -64,6 +72,12 @@ func Load(env string) (*Config, error) {
 		return nil, err
 	}
 	if err := v.BindEnv("redis.uri", "REDIS_URI"); err != nil {
+		return nil, err
+	}
+	if err := v.BindEnv("app.tls.cert_file", "TLS_CERT_FILE"); err != nil {
+		return nil, err
+	}
+	if err := v.BindEnv("app.tls.key_file", "TLS_KEY_FILE"); err != nil {
 		return nil, err
 	}
 

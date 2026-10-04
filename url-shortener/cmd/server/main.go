@@ -87,7 +87,21 @@ func run() error {
 	}
 
 	svc := shortener.New(db, cache, logger)
-	return httpapi.Run(ctx, httpapi.New(cfg.App, svc, logger, reg), logger)
+	srv := httpapi.New(cfg.App, svc, logger, reg)
+
+	if cfg.App.TLS.CertFile != "" && cfg.App.TLS.KeyFile != "" {
+		tlsSrv, err := httpapi.WithTLS(srv, cfg.App.TLS.Port, cfg.App.TLS.CertFile, cfg.App.TLS.KeyFile)
+		if err != nil {
+			return err
+		}
+		go func() {
+			if err := httpapi.Run(ctx, tlsSrv, logger); err != nil {
+				logger.Error("TLS server stopped", "error", err.Error())
+			}
+		}()
+	}
+
+	return httpapi.Run(ctx, srv, logger)
 }
 
 // Go's GC paces itself on heap growth alone and knows nothing of the
