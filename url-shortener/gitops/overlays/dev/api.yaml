@@ -92,10 +92,3 @@ spec:
       sectionName: http
   hostnames:
     - url-shortener.dev.k8s.homelab.grncunha.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: url-shortener-api-lb
-  annotations:
-    external-dns.kubernetes.io/hostname: url-shortener-l3.dev.k8s.homelab.grncunha.com

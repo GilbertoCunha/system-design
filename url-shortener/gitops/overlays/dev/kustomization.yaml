@@ -4,6 +4,8 @@ kind: Kustomization
 
 resources:
   - ../../base
+  # The API's direct address on the mesh, without the gateway
+  - api-lb.yaml
 
 patches:
   - path: api.yaml
