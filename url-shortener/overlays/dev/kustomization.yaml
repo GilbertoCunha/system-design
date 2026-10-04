@@ -29,6 +29,6 @@ configMapGenerator:
 images:
 - name: url-shortener
   newName: ghcr.io/gilbertocunha/system-design
-  newTag: url-shortener-9114907a70201d70fbafb30761d660159d38ae63
+  newTag: url-shortener-3b15b8fc16d15d009f468941b855a2ab3d8d31fb
 transformers:
 - deploy-annotations.yaml
