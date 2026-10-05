@@ -55,7 +55,7 @@ spec:
             limits:
               # Without the gateway in front it can use the CPU Envoy took:
               # 16k requests a second used under 2 CPUs
-              cpu: 4
+              cpu: 5
               memory: 500Mi
           # Declared, not just listened on: Pyroscope's Alloy only scrapes a
           # port the pod declares, matched against the profiles annotations.
