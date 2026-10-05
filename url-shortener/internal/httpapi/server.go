@@ -78,6 +78,11 @@ func New(cfg config.App, svc *shortener.Service, log *slog.Logger, reg *promethe
 // WithTLS returns a server for the same handler as srv that serves HTTPS on
 // port. Go turns HTTP/2 on by default over TLS, and it stays on. The
 // certificate is read once, at start: a renewed one takes a restart.
+//
+// No ReadTimeout or WriteTimeout, unlike srv: over HTTP/2 they can end a
+// whole connection rather than one request, and every reconnect costs the
+// client a new TLS handshake. ReadHeaderTimeout and IdleTimeout still guard
+// against slow and idle clients.
 func WithTLS(srv *http.Server, port int, certFile, keyFile string) (*http.Server, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -88,8 +93,6 @@ func WithTLS(srv *http.Server, port int, certFile, keyFile string) (*http.Server
 		Handler:           srv.Handler,
 		TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12},
 		ReadHeaderTimeout: srv.ReadHeaderTimeout,
-		ReadTimeout:       srv.ReadTimeout,
-		WriteTimeout:      srv.WriteTimeout,
 		IdleTimeout:       srv.IdleTimeout,
 		ErrorLog:          srv.ErrorLog,
 	}, nil
