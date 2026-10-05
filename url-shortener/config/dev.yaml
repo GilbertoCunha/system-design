@@ -6,7 +6,7 @@ app:
   read_timeout: 5s
   write_timeout: 5s
   idle_timeout: 30s
-  max_in_flight: 1200
+  max_in_flight: 2000
   pprof_addr: ":6060"
   # HTTPS, served only when TLS_CERT_FILE and TLS_KEY_FILE are set
   tls:
@@ -27,4 +27,4 @@ redis:
     query: 500ms
   # Per API pod. 50 served the same 10k req/s.
   pool:
-    size: 50
+    size: 150
