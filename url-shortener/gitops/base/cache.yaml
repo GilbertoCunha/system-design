@@ -71,7 +71,7 @@ spec:
 
         # Metrics exporter for redis
         - name: redis-exporter
-          image: oliver006/redis_exporter:v1.92.0
+          image: oliver006/redis_exporter:v1.96.0
           env:
             - name: REDIS_ADDR
               value: redis://localhost:6379
