@@ -29,7 +29,7 @@ env:
   # renovate: datasource=github-releases depName=sqlc-dev/sqlc
   SQLC_VERSION: v1.31.1
   # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/(?<version>.+)$
-  KUSTOMIZE_VERSION: v5.8.2
+  KUSTOMIZE_VERSION: v5.8.3
 
 jobs:
   # Three jobs per project, run side by side: the checks that only need Go and
