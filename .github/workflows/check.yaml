@@ -23,7 +23,7 @@ concurrency:
 env:
   # Renovate keeps these current, through the comment above each one.
   # renovate: datasource=github-releases depName=go-task/task
-  TASK_VERSION: v3.53.1
+  TASK_VERSION: v3.54.0
   # The version that generated the committed code. A different one writes a
   # different header, and the "generated code is current" step then fails.
   # renovate: datasource=github-releases depName=sqlc-dev/sqlc
